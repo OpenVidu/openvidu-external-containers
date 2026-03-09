@@ -2,11 +2,6 @@ name: CI
 
 on:
   push:
-    paths:
-      - "images/mc/**"
-  pull_request:
-    paths:
-      - "images/mc/**"
 
 jobs:
   test-mc:
