@@ -18,11 +18,14 @@ RUN COMMIT=$(git rev-parse HEAD) && \
         -X github.com/chainguard-forks/minio/cmd.Edition=agpl" \
       -o /minio .
 
-FROM busybox:stable
+FROM ubuntu:24.04
 
-RUN addgroup -S minio && adduser -S -G minio minio
+ENV YQ_VERSION=v4.52.4 \
+    WAIT_FOR_PORT_VERSION=v1.0.10 \
+    RENDER_TEMPLATE_VERSION=v1.0.9 \
+    DEBIAN_FRONTEND=noninteractive
 
-COPY --from=builder /minio /usr/local/bin/minio
+# COPY --from=builder /minio /usr/local/bin/minio
 
 RUN mkdir /data && chown minio:minio /data
 

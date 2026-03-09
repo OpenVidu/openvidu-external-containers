@@ -3,14 +3,20 @@ name: Build and push images
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Image version tag (e.g. 1.2.3)"
-        required: true
-        type: string
-      minio_tag:
-        description: "MinIO source tag from chainguard-forks/minio"
+      build_minio:
+        description: "Build openvidu/minio"
         required: false
-        type: string
+        type: boolean
+        default: false
+      build_mc:
+        description: "Build openvidu/mc"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  MINIO_TAG: RELEASE.2026-03-04T16-04-53Z
+  DOCKER_BUILD_SUMMARY: false
 
 jobs:
   build:
@@ -18,13 +24,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: minio-bucket-checker
-            context: images/minio-bucket-checker
-            image: openvidu/minio-bucket-checker
           - name: minio
             context: images/minio
             image: openvidu/minio
-            build_args: MINIO_TAG=${{ inputs.minio_tag }}
+          - name: mc
+            context: images/mc
+            image: openvidu/mc
 
     steps:
       - name: Checkout
@@ -42,11 +47,169 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set build variables
+        id: vars
+        run: |
+          if [[ "${{ matrix.name }}" == "mc" ]]; then
+            echo "tag=RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
+            echo "build_args=" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
+            echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build ${{ matrix.name }} for scanning
+        if: |
+          (matrix.name == 'minio' && inputs.build_minio) ||
+          (matrix.name == 'mc' && inputs.build_mc)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          load: true
+          push: false
+          tags: ${{ matrix.image }}:scan
+          build-args: ${{ steps.vars.outputs.build_args }}
+
+      - name: Scan for secrets
+        if: |
+          (matrix.name == 'minio' && inputs.build_minio) ||
+          (matrix.name == 'mc' && inputs.build_mc)
+        uses: aquasecurity/trivy-action@0.34.1
+        with:
+          image-ref: "${{ matrix.image }}:scan"
+          scanners: "secret"
+          exit-code: "1"
+          timeout: "20m"
+
+      - name: Scan for vulnerabilities
+        if: |
+          (matrix.name == 'minio' && inputs.build_minio) ||
+          (matrix.name == 'mc' && inputs.build_mc)
+        uses: aquasecurity/trivy-action@0.34.1
+        with:
+          image-ref: "${{ matrix.image }}:scan"
+          scanners: "vuln"
+          exit-code: "0"
+          timeout: "20m"
+          format: "json"
+          output: "trivy-vuln-${{ matrix.name }}.json"
+
+      - name: Upload vulnerability report
+        if: |
+          always() &&
+          ((matrix.name == 'minio' && inputs.build_minio) ||
+          (matrix.name == 'mc' && inputs.build_mc))
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-vuln-${{ matrix.name }}
+          path: trivy-vuln-${{ matrix.name }}.json
+          retention-days: 1
+
       - name: Build and push ${{ matrix.name }}
+        if: |
+          (matrix.name == 'minio' && inputs.build_minio) ||
+          (matrix.name == 'mc' && inputs.build_mc)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ matrix.image }}:${{ inputs.version }}
-          build-args: ${{ matrix.build_args }}
+          tags: ${{ matrix.image }}:${{ steps.vars.outputs.tag }}
+          build-args: ${{ steps.vars.outputs.build_args }}
+
+  security-report:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all vulnerability reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: trivy-vuln-*
+          path: ./trivy-reports
+          merge-multiple: false
+
+      - name: Generate security report
+        run: |
+          echo "## Docker Image Security Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Critical | High | Medium | Low | Total |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|----------|------|--------|-----|-------|" >> $GITHUB_STEP_SUMMARY
+
+          total_critical=0; total_high=0; total_medium=0; total_low=0
+
+          for report_dir in ./trivy-reports/trivy-vuln-*/; do
+            if [ -d "$report_dir" ]; then
+              for report in "$report_dir"/*.json; do
+                if [ -f "$report" ]; then
+                  image_name=$(basename "$report_dir" | sed 's/trivy-vuln-//')
+                  critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$report" 2>/dev/null || echo 0)
+                  high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$report" 2>/dev/null || echo 0)
+                  medium=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$report" 2>/dev/null || echo 0)
+                  low=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$report" 2>/dev/null || echo 0)
+                  total=$((critical + high + medium + low))
+                  echo "| $image_name | $critical | $high | $medium | $low | $total |" >> $GITHUB_STEP_SUMMARY
+                  total_critical=$((total_critical + critical))
+                  total_high=$((total_high + high))
+                  total_medium=$((total_medium + medium))
+                  total_low=$((total_low + low))
+                fi
+              done
+            fi
+          done
+
+          total_all=$((total_critical + total_high + total_medium + total_low))
+          echo "| **TOTAL** | **$total_critical** | **$total_high** | **$total_medium** | **$total_low** | **$total_all** |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "### Detailed Vulnerabilities by Image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for report_dir in ./trivy-reports/trivy-vuln-*/; do
+            if [ -d "$report_dir" ]; then
+              for report in "$report_dir"/*.json; do
+                if [ -f "$report" ]; then
+                  image_name=$(basename "$report_dir" | sed 's/trivy-vuln-//')
+                  vuln_count=$(jq '[.Results[]?.Vulnerabilities[]?] | length' "$report" 2>/dev/null || echo 0)
+
+                  echo "<details>" >> $GITHUB_STEP_SUMMARY
+                  echo "<summary><strong>$image_name</strong> ($vuln_count vulnerabilities)</summary>" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$vuln_count" -gt 0 ]; then
+                    echo "| Severity | CVE ID | Package | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
+                    echo "|----------|--------|---------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+
+                    jq -r '
+                      [.Results[]?.Vulnerabilities[]?]
+                      | sort_by(
+                          if .Severity == "CRITICAL" then 0
+                          elif .Severity == "HIGH" then 1
+                          elif .Severity == "MEDIUM" then 2
+                          else 3 end
+                        )
+                      | .[]
+                      | "| \(.Severity) | \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "—") | \(.Title // "—" | gsub("[\\n\\r]"; " ") | if length > 80 then .[:80] + "..." else . end) |"
+                    ' "$report" >> $GITHUB_STEP_SUMMARY 2>/dev/null
+                  else
+                    echo "No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "</details>" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                fi
+              done
+            fi
+          done
+
+          echo "*Vulnerability scanning is informational only.*" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$total_critical" -gt 0 ]; then
+            echo "::warning::Found $total_critical CRITICAL vulnerabilities across all images"
+          fi
+        shell: bash
