@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "images/mc/**"
+  pull_request:
+    paths:
+      - "images/mc/**"
+
+jobs:
+  test-mc:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: images/mc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: images/mc/go.mod
+
+      - name: Run integration tests
+        run: go test -tags integration -timeout 15m -v ./...
