@@ -7,6 +7,10 @@ on:
         description: "Image version tag (e.g. 1.2.3)"
         required: true
         type: string
+      minio_tag:
+        description: "MinIO source tag from chainguard-forks/minio"
+        required: false
+        type: string
 
 jobs:
   build:
@@ -17,6 +21,10 @@ jobs:
           - name: minio-bucket-checker
             context: images/minio-bucket-checker
             image: openvidu/minio-bucket-checker
+          - name: minio
+            context: images/minio
+            image: openvidu/minio
+            build_args: MINIO_TAG=${{ inputs.minio_tag }}
 
     steps:
       - name: Checkout
@@ -41,3 +49,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ matrix.image }}:${{ inputs.version }}
+          build-args: ${{ matrix.build_args }}
