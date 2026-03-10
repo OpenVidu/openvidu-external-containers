@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       build_mc:
-        description: "Build openvidu/mc"
+        description: "Build openvidu/minio-client"
         required: false
         type: boolean
         default: false
@@ -29,7 +29,7 @@ jobs:
             image: openvidu/minio
           - name: mc
             context: images/mc
-            image: openvidu/mc
+            image: openvidu/minio-client
 
     steps:
       - name: Checkout
