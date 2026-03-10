@@ -25,7 +25,8 @@ jobs:
       matrix:
         include:
           - name: minio
-            context: images/minio
+            context: .
+            file: images/minio/Dockerfile
             image: openvidu/minio
           - name: mc
             context: images/mc
@@ -65,6 +66,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           load: true
           push: false
           tags: ${{ matrix.image }}:scan
@@ -112,6 +114,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ matrix.image }}:${{ steps.vars.outputs.tag }}

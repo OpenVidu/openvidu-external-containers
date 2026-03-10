@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine AS minio-builder
 
 ARG MINIO_TAG
 
@@ -18,25 +18,54 @@ RUN COMMIT=$(git rev-parse HEAD) && \
         -X github.com/chainguard-forks/minio/cmd.Edition=agpl" \
       -o /minio .
 
-FROM ubuntu:24.04
+FROM golang:1.26-alpine AS mc-builder
 
-ENV YQ_VERSION=v4.52.4 \
-    WAIT_FOR_PORT_VERSION=v1.0.10 \
-    RENDER_TEMPLATE_VERSION=v1.0.9 \
+WORKDIR /src
+
+COPY images/mc/go.mod images/mc/go.sum ./
+RUN go mod download
+COPY images/mc/*.go ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /mc .
+
+FROM debian:bookworm-slim
+
+ENV HOME="/" \
+    OS_ARCH="amd64" \
+    OS_FLAVOUR="debian-12" \
+    OS_NAME="linux" \
     DEBIAN_FRONTEND=noninteractive
 
-# COPY --from=builder /minio /usr/local/bin/minio
+COPY images/minio/prebuildfs /
 
-RUN mkdir /data && chown minio:minio /data
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      jq \
+      procps \
+    && rm -rf /var/lib/apt/lists/*
 
-VOLUME /data
+COPY images/minio/rootfs /
+
+RUN mkdir -p /opt/bitnami/minio/bin /opt/bitnami/minio-client/bin
+
+COPY --from=minio-builder /minio /opt/bitnami/minio/bin/minio
+COPY --from=mc-builder /mc /opt/bitnami/minio-client/bin/mc
+
+RUN chmod +x /opt/bitnami/minio/bin/minio /opt/bitnami/minio-client/bin/mc
+
+RUN useradd -r -u 1001 -g root minio
+
+RUN /opt/bitnami/scripts/minio-client/postunpack.sh && \
+    /opt/bitnami/scripts/minio/postunpack.sh
+
+ENV BITNAMI_APP_NAME="minio" \
+    PATH="/opt/bitnami/minio-client/bin:/opt/bitnami/minio/bin:${PATH}"
 
 EXPOSE 9000 9001
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q --spider http://localhost:9000/minio/health/live || exit 1
+VOLUME ["/bitnami/minio/data"]
 
-USER minio
+USER 1001
 
-ENTRYPOINT ["/usr/local/bin/minio"]
-CMD ["server", "/data"]
+ENTRYPOINT ["/opt/bitnami/scripts/minio/entrypoint.sh"]
+CMD ["/opt/bitnami/scripts/minio/run.sh"]
