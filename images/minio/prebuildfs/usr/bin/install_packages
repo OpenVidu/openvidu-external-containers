@@ -1,0 +1,6 @@
+#!/bin/sh
+# Copyright Broadcom, Inc. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+set -eu
+
+apk add --no-cache "$@"

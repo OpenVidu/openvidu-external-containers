@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS minio-builder
+FROM golang:1.26-alpine AS minio-builder
 
 ARG MINIO_TAG
 
@@ -27,22 +27,22 @@ RUN go mod download
 COPY images/mc/*.go ./
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /mc .
 
-FROM debian:bookworm-slim
+FROM chainguard/wolfi-base:latest
 
 ENV HOME="/" \
     OS_ARCH="amd64" \
-    OS_FLAVOUR="debian-12" \
-    OS_NAME="linux" \
-    DEBIAN_FRONTEND=noninteractive
+    OS_FLAVOUR="wolfi" \
+    OS_NAME="linux"
 
 COPY images/minio/prebuildfs /
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates \
+RUN apk add --no-cache \
+      bash \
+      ca-certificates-bundle \
       curl \
       jq \
       procps \
-    && rm -rf /var/lib/apt/lists/*
+      shadow
 
 COPY images/minio/rootfs /
 
