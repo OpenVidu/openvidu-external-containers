@@ -78,7 +78,7 @@ jobs:
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc)
-        uses: aquasecurity/trivy-action@0.34.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
           scanners: "secret"
@@ -89,7 +89,7 @@ jobs:
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc)
-        uses: aquasecurity/trivy-action@0.34.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
           scanners: "vuln"
