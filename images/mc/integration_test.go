@@ -27,17 +27,17 @@ import (
 )
 
 const (
-	minioImage = "openvidu/minio:2025.10.15-debian-12-r9"
-	testUser   = "minio"
-	testPass   = "miniosecret"
-	testAlias  = "minio"
+	testUser  = "minio"
+	testPass  = "miniosecret"
+	testAlias = "minio"
 )
 
 // Package-level state set up once in TestMain and shared across tests.
 var (
-	mcBin     string // path to compiled mc binary
-	configDir string // shared config dir with testAlias registered
-	endpoint  string // http://host:port of the shared MinIO container
+	minioImage string // set in TestMain after build
+	mcBin      string // path to compiled mc binary
+	configDir  string // shared config dir with testAlias registered
+	endpoint   string // http://host:port of the shared MinIO container
 )
 
 // ── TestMain ──────────────────────────────────────────────────────────────────
@@ -48,6 +48,13 @@ func TestMain(m *testing.M) {
 
 func run(m *testing.M) int {
 	var err error
+
+	// Build the minio image from source once.
+	minioImage, err = buildMinioImage()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "build minio image: %v\n", err)
+		return 1
+	}
 
 	// Build the mc binary once.
 	mcBin, err = buildBinary()
@@ -93,6 +100,42 @@ func buildBinary() (string, error) {
 		return "", fmt.Errorf("%w\n%s", err, out)
 	}
 	return bin, nil
+}
+
+// buildMinioImage builds the openvidu/minio image from the repository source
+// and returns its tag. MINIO_TAG env var overrides the default release tag.
+func buildMinioImage() (string, error) {
+	tag := "openvidu/minio:integration-test"
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		return "", fmt.Errorf("resolve repo root: %w", err)
+	}
+
+	minioTag := os.Getenv("MINIO_TAG")
+	if minioTag == "" {
+		data, err := os.ReadFile(filepath.Join(repoRoot, "versions.env"))
+		if err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				if k, v, ok := strings.Cut(line, "="); ok && k == "MINIO_TAG" {
+					minioTag = strings.TrimSpace(v)
+					break
+				}
+			}
+		}
+	}
+
+	cmd := exec.Command("docker", "build",
+		"-f", filepath.Join(repoRoot, "images", "minio", "Dockerfile"),
+		"--build-arg", "MINIO_TAG="+minioTag,
+		"-t", tag,
+		repoRoot,
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("docker build failed: %w\n%s", err, out)
+	}
+	return tag, nil
 }
 
 // startMinio starts a MinIO container and returns (container, "http://host:port", error).

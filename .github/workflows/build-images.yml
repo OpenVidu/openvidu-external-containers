@@ -15,7 +15,6 @@ on:
         default: false
 
 env:
-  MINIO_TAG: RELEASE.2026-03-04T16-04-53Z
   DOCKER_BUILD_SUMMARY: false
 
 jobs:
@@ -35,6 +34,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Load versions
+        run: cat versions.env >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

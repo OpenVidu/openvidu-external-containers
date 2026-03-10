@@ -21,3 +21,20 @@ jobs:
 
       - name: Run integration tests
         run: go test -tags integration -timeout 15m -v ./...
+
+  test-minio:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: images/minio
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: images/minio/go.mod
+
+      - name: Run integration tests
+        run: go test -tags integration -timeout 30m -v ./...
