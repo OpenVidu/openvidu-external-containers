@@ -54,10 +54,10 @@ jobs:
         id: vars
         run: |
           if [[ "${{ matrix.name }}" == "mc" ]]; then
-            echo "tag=RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
+            echo "tags=${{ matrix.image }}:RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
             echo "build_args=" >> $GITHUB_OUTPUT
           else
-            echo "tag=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
+            echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
           fi
 
@@ -119,7 +119,7 @@ jobs:
           file: ${{ matrix.file }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ matrix.image }}:${{ steps.vars.outputs.tag }}
+          tags: ${{ steps.vars.outputs.tags }}
           build-args: ${{ steps.vars.outputs.build_args }}
 
   security-report:
