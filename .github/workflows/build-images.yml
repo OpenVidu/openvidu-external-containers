@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Load versions
-        run: cat versions.env >> $GITHUB_ENV
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' versions.env >> "$GITHUB_ENV"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

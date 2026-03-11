@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Load versions
-        run: cat ../../versions.env >> $GITHUB_ENV
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' ../../versions.env >> "$GITHUB_ENV"
 
       - name: Fix Docker MTU for GitHub Actions
         run: |
@@ -94,7 +94,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Load versions
-        run: cat versions.env >> $GITHUB_ENV
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' versions.env >> "$GITHUB_ENV"
 
       - name: Build image for tests
         run: |
