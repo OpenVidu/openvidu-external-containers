@@ -10,10 +10,13 @@ set -o pipefail
 # set -o xtrace # Uncomment this line for debugging purposes
 
 # Load libraries
+. /opt/bitnami/scripts/libbitnami.sh
 . /opt/bitnami/scripts/libmongodb.sh
 
 # Load environment
 . /opt/bitnami/scripts/mongodb-env.sh
+
+print_welcome_page
 
 # We add the copy from default config in the entrypoint to not break users 
 # bypassing the setup.sh logic. If the file already exists do not overwrite (in
@@ -29,4 +32,3 @@ fi
 
 echo ""
 exec "$@"
-
