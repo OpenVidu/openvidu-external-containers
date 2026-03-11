@@ -1,0 +1,7 @@
+services:
+  mongodb:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "27017"

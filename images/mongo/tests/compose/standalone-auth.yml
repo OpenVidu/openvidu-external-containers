@@ -1,0 +1,10 @@
+services:
+  mongodb:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    environment:
+      - MONGODB_ROOT_PASSWORD=rootpass123
+      - MONGODB_USERNAME=testuser
+      - MONGODB_PASSWORD=testpass123
+      - MONGODB_DATABASE=testdb
+    ports:
+      - "27017"

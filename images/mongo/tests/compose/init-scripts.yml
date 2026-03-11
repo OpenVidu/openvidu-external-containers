@@ -1,0 +1,10 @@
+services:
+  mongodb:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ../fixtures/init-scripts/01-create-collection.sh:/docker-entrypoint-initdb.d/01-create-collection.sh:ro
+      - ../fixtures/init-scripts/02-insert-data.js:/docker-entrypoint-initdb.d/02-insert-data.js:ro
+    ports:
+      - "27017"

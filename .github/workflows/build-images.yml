@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_mongo:
+        description: "Build openvidu/mongodb"
+        required: false
+        type: boolean
+        default: false
 
 env:
   DOCKER_BUILD_SUMMARY: false
@@ -29,7 +34,12 @@ jobs:
             image: openvidu/minio
           - name: mc
             context: images/mc
+            file: Dockerfile
             image: openvidu/minio-client
+          - name: mongo
+            context: images/mongo
+            file: Dockerfile
+            image: openvidu/mongodb
 
     steps:
       - name: Checkout
@@ -56,6 +66,18 @@ jobs:
           if [[ "${{ matrix.name }}" == "mc" ]]; then
             echo "tags=${{ matrix.image }}:RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
             echo "build_args=" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.name }}" == "mongo" ]]; then
+            echo "tags=${{ matrix.image }}:${{ env.MONGODB_MAJOR_MINOR }},${{ matrix.image }}:${{ env.MONGODB_VERSION }},${{ matrix.image }}:${{ env.MONGODB_VERSION }}-r${{ env.MONGODB_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
+            {
+              echo "build_args<<EOF"
+              echo "YQ_VERSION=${{ env.YQ_VERSION }}"
+              echo "WAIT_FOR_PORT_VERSION=${{ env.WAIT_FOR_PORT_VERSION }}"
+              echo "RENDER_TEMPLATE_VERSION=${{ env.RENDER_TEMPLATE_VERSION }}"
+              echo "MONGODB_MAJOR_MINOR=${{ env.MONGODB_MAJOR_MINOR }}"
+              echo "MONGODB_VERSION=${{ env.MONGODB_VERSION }}"
+              echo "MONGOSH_VERSION=${{ env.MONGOSH_VERSION }}"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
           else
             echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
@@ -64,7 +86,8 @@ jobs:
       - name: Build ${{ matrix.name }} for scanning
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc)
+          (matrix.name == 'mc' && inputs.build_mc) ||
+          (matrix.name == 'mongo' && inputs.build_mongo)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -77,7 +100,8 @@ jobs:
       - name: Scan for secrets
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc)
+          (matrix.name == 'mc' && inputs.build_mc) ||
+          (matrix.name == 'mongo' && inputs.build_mongo)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
@@ -88,7 +112,8 @@ jobs:
       - name: Scan for vulnerabilities
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc)
+          (matrix.name == 'mc' && inputs.build_mc) ||
+          (matrix.name == 'mongo' && inputs.build_mongo)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
@@ -102,7 +127,8 @@ jobs:
         if: |
           always() &&
           ((matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc))
+          (matrix.name == 'mc' && inputs.build_mc) ||
+          (matrix.name == 'mongo' && inputs.build_mongo))
         uses: actions/upload-artifact@v4
         with:
           name: trivy-vuln-${{ matrix.name }}
@@ -112,7 +138,8 @@ jobs:
       - name: Build and push ${{ matrix.name }}
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc)
+          (matrix.name == 'mc' && inputs.build_mc) ||
+          (matrix.name == 'mongo' && inputs.build_mongo)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}

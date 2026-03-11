@@ -5,6 +5,54 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-mongo:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: images/mongo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load versions
+        run: cat ../../versions.env >> $GITHUB_ENV
+
+      - name: Fix Docker MTU for GitHub Actions
+        run: |
+          echo '{"mtu": 1450}' | sudo tee /etc/docker/daemon.json > /dev/null
+          sudo systemctl restart docker
+
+      - name: Build image for tests
+        run: |
+          docker build \
+            --build-arg YQ_VERSION="${YQ_VERSION}" \
+            --build-arg WAIT_FOR_PORT_VERSION="${WAIT_FOR_PORT_VERSION}" \
+            --build-arg RENDER_TEMPLATE_VERSION="${RENDER_TEMPLATE_VERSION}" \
+            --build-arg MONGODB_MAJOR_MINOR="${MONGODB_MAJOR_MINOR}" \
+            --build-arg MONGODB_VERSION="${MONGODB_VERSION}" \
+            --build-arg MONGOSH_VERSION="${MONGOSH_VERSION}" \
+            -t openvidu/mongodb:test \
+            .
+
+      - name: Install BATS
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Run integration tests
+        env:
+          MONGODB_IMAGE: openvidu/mongodb:test
+        run: tests/run-tests.sh
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker containers ==="
+          docker ps -a
+          echo ""
+          for project in $(docker compose ls -q 2>/dev/null); do
+            echo "=== Logs for project: ${project} ==="
+            docker compose -p "$project" logs 2>&1 || true
+          done
+
   test-mc:
     runs-on: ubuntu-latest
     defaults:

@@ -1,0 +1,44 @@
+networks:
+  replicaset-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+
+services:
+  mongodb-primary:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    networks:
+      - replicaset-net
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=rootpass123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    ports:
+      - "27017"
+
+  mongodb-secondary:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    networks:
+      - replicaset-net
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-secondary
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=rootpass123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+
+  mongodb-arbiter:
+    image: ${MONGODB_IMAGE:-openvidu/mongodb:8.0}
+    networks:
+      - replicaset-net
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+      - MONGODB_REPLICA_SET_MODE=arbiter
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=rootpass123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
