@@ -52,19 +52,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Load versions
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' versions.env >> "$GITHUB_ENV"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -101,7 +101,7 @@ jobs:
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
           (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
@@ -145,7 +145,7 @@ jobs:
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
           (matrix.name == 'mimir' && inputs.build_mimir))
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-vuln-${{ matrix.name }}
           path: trivy-vuln-${{ matrix.name }}.json
@@ -157,7 +157,7 @@ jobs:
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
           (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
@@ -172,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all vulnerability reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: trivy-vuln-*
           path: ./trivy-reports
