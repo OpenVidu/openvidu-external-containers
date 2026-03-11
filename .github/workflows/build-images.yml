@@ -31,6 +31,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: minio
@@ -39,14 +40,14 @@ jobs:
             image: openvidu/minio
           - name: mc
             context: images/mc
-            file: Dockerfile
+            file: images/mc/Dockerfile
             image: openvidu/minio-client
           - name: mongo
             context: images/mongo
-            file: Dockerfile
+            file: images/mongo/Dockerfile
             image: openvidu/mongodb
           - name: mimir
-            context: .
+            context: images/mimir
             file: images/mimir/Dockerfile
             image: openvidu/grafana-mimir
 
