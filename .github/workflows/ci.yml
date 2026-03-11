@@ -86,3 +86,38 @@ jobs:
 
       - name: Run integration tests
         run: go test -tags integration -timeout 30m -v ./...
+
+  test-mimir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load versions
+        run: cat versions.env >> $GITHUB_ENV
+
+      - name: Build image for tests
+        run: |
+          docker build \
+            --build-arg MIMIR_TAG="${MIMIR_TAG}" \
+            -t openvidu/grafana-mimir:test \
+            -f images/mimir/Dockerfile \
+            .
+
+      - name: Smoke test shell
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c "echo shell-ok"
+
+      - name: Smoke test runtime user
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'uid=$(id -u); gid=$(id -g); [ "$uid:$gid" = "1001:1001" ] && echo "user-ok:$uid:$gid"'
+
+      - name: Smoke test mimir binary
+        run: |
+          version_output="$(docker run --rm openvidu/grafana-mimir:test --version)"
+          echo "$version_output"
+          case "$version_output" in
+            *"Mimir, version "*) ;;
+            *)
+              echo "Unexpected output from mimir --version"
+              exit 1
+              ;;
+          esac

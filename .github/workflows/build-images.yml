@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_mimir:
+        description: "Build openvidu/grafana-mimir"
+        required: false
+        type: boolean
+        default: false
 
 env:
   DOCKER_BUILD_SUMMARY: false
@@ -40,6 +45,10 @@ jobs:
             context: images/mongo
             file: Dockerfile
             image: openvidu/mongodb
+          - name: mimir
+            context: .
+            file: images/mimir/Dockerfile
+            image: openvidu/grafana-mimir
 
     steps:
       - name: Checkout
@@ -78,16 +87,20 @@ jobs:
               echo "MONGOSH_VERSION=${{ env.MONGOSH_VERSION }}"
               echo "EOF"
             } >> $GITHUB_OUTPUT
-          else
+          elif [[ "${{ matrix.name }}" == "minio" ]]; then
             echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=${{ matrix.image }}:${{ env.MIMIR_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
+            echo "build_args=MIMIR_TAG=${{ env.MIMIR_TAG }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build ${{ matrix.name }} for scanning
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo)
+          (matrix.name == 'mongo' && inputs.build_mongo) ||
+          (matrix.name == 'mimir' && inputs.build_mimir)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -101,7 +114,8 @@ jobs:
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo)
+          (matrix.name == 'mongo' && inputs.build_mongo) ||
+          (matrix.name == 'mimir' && inputs.build_mimir)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
@@ -113,7 +127,8 @@ jobs:
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo)
+          (matrix.name == 'mongo' && inputs.build_mongo) ||
+          (matrix.name == 'mimir' && inputs.build_mimir)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "${{ matrix.image }}:scan"
@@ -128,7 +143,8 @@ jobs:
           always() &&
           ((matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo))
+          (matrix.name == 'mongo' && inputs.build_mongo) ||
+          (matrix.name == 'mimir' && inputs.build_mimir))
         uses: actions/upload-artifact@v4
         with:
           name: trivy-vuln-${{ matrix.name }}
@@ -139,7 +155,8 @@ jobs:
         if: |
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo)
+          (matrix.name == 'mongo' && inputs.build_mongo) ||
+          (matrix.name == 'mimir' && inputs.build_mimir)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
