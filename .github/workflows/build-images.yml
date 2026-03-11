@@ -88,10 +88,10 @@ jobs:
               echo "EOF"
             } >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.name }}" == "minio" ]]; then
-            echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
+            echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:${{ env.MINIO_TAG }}-r${{ env.MINIO_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
           else
-            echo "tags=${{ matrix.image }}:${{ env.MIMIR_TAG }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
+            echo "tags=${{ matrix.image }}:${{ env.MIMIR_TAG }},${{ matrix.image }}:${{ env.MIMIR_TAG }}-r${{ env.MIMIR_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MIMIR_TAG=${{ env.MIMIR_TAG }}" >> $GITHUB_OUTPUT
           fi
 

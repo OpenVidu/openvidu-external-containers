@@ -25,6 +25,12 @@ docker build \
 
 Replace `<tag>` with a valid tag from `grafana/mimir` (for example `3.0.4`).
 
+In CI/release workflows, tags are sourced from `versions.env` and published as:
+
+- `openvidu/grafana-mimir:${MIMIR_TAG}`
+- `openvidu/grafana-mimir:${MIMIR_TAG}-r${MIMIR_BUILD_NUMBER}`
+- `openvidu/grafana-mimir:latest`
+
 The build selects the correct binary asset for each platform (`mimir-linux-amd64` / `mimir-linux-arm64`) and verifies it with the corresponding `-sha-256` file.
 
 ## Run

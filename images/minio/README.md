@@ -43,6 +43,12 @@ docker build \
 
 Replace `<tag>` with a valid release tag from [chainguard-forks/minio](https://github.com/chainguard-forks/minio/tags) (e.g. `RELEASE.2026-03-04T16-04-53Z`).
 
+In CI/release workflows, tags are sourced from `versions.env` and published as:
+
+- `openvidu/minio:${MINIO_TAG}`
+- `openvidu/minio:${MINIO_TAG}-r${MINIO_BUILD_NUMBER}`
+- `openvidu/minio:latest`
+
 ## Run
 
 ```bash
