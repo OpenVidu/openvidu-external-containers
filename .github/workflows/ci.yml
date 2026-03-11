@@ -71,7 +71,7 @@ jobs:
             images/mc/go.sum
 
       - name: Run integration tests
-        run: go test -tags integration -timeout 15m -v ./...
+        run: go test -count=1 -tags integration -timeout 15m -v ./...
 
   test-minio:
     runs-on: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
             images/minio/go.sum
 
       - name: Run integration tests
-        run: go test -tags integration -timeout 30m -v ./...
+        run: go test -count=1 -tags integration -timeout 30m -v ./...
 
   test-mimir:
     runs-on: ubuntu-latest
