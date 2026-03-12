@@ -299,5 +299,6 @@ jobs:
           git add README.md
           if ! git diff --cached --quiet; then
             git commit -m "Update security scan report"
+            git pull --rebase
             git push
           fi
