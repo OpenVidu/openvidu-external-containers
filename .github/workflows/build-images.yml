@@ -27,7 +27,7 @@ on:
         description: "Update README with the security scan report"
         required: false
         type: boolean
-        default: true
+        default: false
 
 env:
   DOCKER_BUILD_SUMMARY: false
