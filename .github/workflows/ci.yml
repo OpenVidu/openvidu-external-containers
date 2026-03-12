@@ -12,7 +12,7 @@ jobs:
         working-directory: images/mongo
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Load versions
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' ../../versions.env >> "$GITHUB_ENV"
@@ -60,10 +60,10 @@ jobs:
         working-directory: images/mc
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v6.3.0
         with:
           go-version-file: images/mc/go.mod
           cache-dependency-path: |
@@ -80,10 +80,10 @@ jobs:
         working-directory: images/minio
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v6.3.0
         with:
           go-version-file: images/minio/go.mod
           cache-dependency-path: |
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Load versions
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' versions.env >> "$GITHUB_ENV"
