@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      update_readme:
+        description: "Update README with the security scan report"
+        required: false
+        type: boolean
+        default: true
 
 env:
   DOCKER_BUILD_SUMMARY: false
@@ -185,6 +190,7 @@ jobs:
           merge-multiple: false
 
       - name: Generate security report
+        shell: bash
         run: |
           echo "## Docker Image Security Scan Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -264,6 +270,13 @@ jobs:
 
           echo "*Vulnerability scanning is informational only.*" >> $GITHUB_STEP_SUMMARY
 
+          if [ "$total_critical" -gt 0 ]; then
+            echo "::warning::Found $total_critical CRITICAL vulnerabilities across all images"
+          fi
+
+          if [ "${{ inputs.update_readme }}" != "true" ]; then
+            exit 0
+          fi
           python3 - <<'PYEOF'
           import re, os
           with open("README.md") as f:
@@ -278,12 +291,8 @@ jobs:
               f.write(readme_new)
           PYEOF
 
-          if [ "$total_critical" -gt 0 ]; then
-            echo "::warning::Found $total_critical CRITICAL vulnerabilities across all images"
-          fi
-        shell: bash
-
       - name: Update README
+        if: inputs.update_readme
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
