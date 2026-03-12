@@ -81,8 +81,8 @@ jobs:
             {
               echo "build_args<<EOF"
               echo "YQ_VERSION=${{ env.YQ_VERSION }}"
-              echo "WAIT_FOR_PORT_VERSION=${{ env.WAIT_FOR_PORT_VERSION }}"
-              echo "RENDER_TEMPLATE_VERSION=${{ env.RENDER_TEMPLATE_VERSION }}"
+              echo "WAIT_FOR_PORT_COMMIT=${{ env.WAIT_FOR_PORT_COMMIT }}"
+              echo "RENDER_TEMPLATE_COMMIT=${{ env.RENDER_TEMPLATE_COMMIT }}"
               echo "MONGODB_MAJOR_MINOR=${{ env.MONGODB_MAJOR_MINOR }}"
               echo "MONGODB_VERSION=${{ env.MONGODB_VERSION }}"
               echo "MONGOSH_VERSION=${{ env.MONGOSH_VERSION }}"

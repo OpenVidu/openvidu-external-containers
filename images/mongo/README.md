@@ -35,8 +35,8 @@ All these variables also support a `_FILE` suffix variant (for example `MONGODB_
 ```bash
 docker build \
   --build-arg YQ_VERSION=v4.52.4 \
-  --build-arg WAIT_FOR_PORT_VERSION=v1.0.10 \
-  --build-arg RENDER_TEMPLATE_VERSION=v1.0.9 \
+  --build-arg WAIT_FOR_PORT_COMMIT=849aab15a7dd39293aa3314850cb4caf3efdca98 \
+  --build-arg RENDER_TEMPLATE_COMMIT=d3fe0ce1f007733315bcce4addb648de1ac5fbe8 \
   --build-arg MONGODB_MAJOR_MINOR=8.0 \
   --build-arg MONGODB_VERSION=8.0.19 \
   --build-arg MONGOSH_VERSION=2.7.0 \

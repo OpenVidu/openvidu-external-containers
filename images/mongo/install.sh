@@ -9,22 +9,6 @@ UBUNTU_CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d'=' -f2)
 # Install dependencies
 apt-get update && apt-get install -y wget gnupg curl
 
-# Install yq
-wget -q https://github.com/mikefarah/yq/releases/download/"${YQ_VERSION}"/yq_linux_"${ARCH}" -O /usr/local/bin/yq
-chmod +x /usr/local/bin/yq
-
-# Install wait-for-port
-wget -q https://github.com/bitnami/wait-for-port/releases/download/"${WAIT_FOR_PORT_VERSION}"/wait-for-port-linux-"${ARCH}".tar.gz
-tar -xzf wait-for-port-linux-"${ARCH}".tar.gz -C /usr/local/bin wait-for-port-linux-"${ARCH}"
-mv /usr/local/bin/wait-for-port-linux-"${ARCH}" /usr/local/bin/wait-for-port
-chmod +x /usr/local/bin/wait-for-port
-
-# Install render-template
-wget -q https://github.com/bitnami/render-template/releases/download/"${RENDER_TEMPLATE_VERSION}"/render-template-linux-"${ARCH}".tar.gz
-tar -xzf render-template-linux-"${ARCH}".tar.gz -C /usr/local/bin render-template-linux-"${ARCH}"
-mv /usr/local/bin/render-template-linux-"${ARCH}" /usr/local/bin/render-template
-chmod +x /usr/local/bin/render-template
-
 # Create directory for MongoDB binaries
 mkdir -p /opt/bitnami/mongodb/bin
 
@@ -47,4 +31,4 @@ mv mongosh-"${MONGODB_SHELL_VERSION}"-linux-"${ARCH2}"/bin/* /opt/bitnami/mongod
 apt-get remove -y wget curl gnupg
 apt-get autoremove -y
 apt-get clean
-rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* wait-for-port-linux-"${ARCH}".tar.gz render-template-linux-"${ARCH}".tar.gz mongosh-"${MONGODB_SHELL_VERSION}"-linux-"${ARCH2}".tgz
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* mongosh-"${MONGODB_SHELL_VERSION}"-linux-"${ARCH2}".tgz
