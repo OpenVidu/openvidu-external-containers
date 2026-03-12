@@ -192,9 +192,6 @@ jobs:
       - name: Generate security report
         shell: bash
         run: |
-          echo "## Docker Image Security Scan Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
           echo "### Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Image | Critical | High | Medium | Low | Total |" >> $GITHUB_STEP_SUMMARY
@@ -284,8 +281,10 @@ jobs:
           summary_path = os.environ["GITHUB_STEP_SUMMARY"]
           with open(summary_path) as f:
               report = f.read()
+          from datetime import datetime, timezone
+          date_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
           pattern = r'(## Security Scan Report\n).*?(?=\n#{1,2}(?!#)|\Z)'
-          replacement = r'\1\n' + report.replace('\\', r'\\')
+          replacement = r'\1' + f'\n*Last updated: {date_str}*\n\n' + report.replace('\\', r'\\')
           readme_new = re.sub(pattern, replacement, readme, count=1, flags=re.DOTALL)
           with open("README.md", "w") as f:
               f.write(readme_new)
