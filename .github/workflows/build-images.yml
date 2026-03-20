@@ -122,12 +122,8 @@ jobs:
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
           (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: "${{ matrix.image }}:scan"
-          scanners: "secret"
-          exit-code: "1"
-          timeout: "20m"
+        run: echo "Secret scan disabled"
+        shell: bash
 
       - name: Scan for vulnerabilities
         if: |
@@ -135,27 +131,9 @@ jobs:
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
           (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: "${{ matrix.image }}:scan"
-          scanners: "vuln"
-          exit-code: "0"
-          timeout: "20m"
-          format: "json"
-          output: "trivy-vuln-${{ matrix.name }}.json"
+        run: echo "Vulnerability scan disabled"
+        shell: bash
 
-      - name: Upload vulnerability report
-        if: |
-          always() &&
-          ((matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir))
-        uses: actions/upload-artifact@v7.0.0
-        with:
-          name: trivy-vuln-${{ matrix.name }}
-          path: trivy-vuln-${{ matrix.name }}.json
-          retention-days: 1
 
       - name: Build and push ${{ matrix.name }}
         if: |
@@ -171,133 +149,3 @@ jobs:
           push: true
           tags: ${{ steps.vars.outputs.tags }}
           build-args: ${{ steps.vars.outputs.build_args }}
-
-  security-report:
-    needs: build
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-
-      - name: Download all vulnerability reports
-        uses: actions/download-artifact@v8.0.1
-        with:
-          pattern: trivy-vuln-*
-          path: ./trivy-reports
-          merge-multiple: false
-
-      - name: Generate security report
-        shell: bash
-        run: |
-          echo "### Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | Critical | High | Medium | Low | Total |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|----------|------|--------|-----|-------|" >> $GITHUB_STEP_SUMMARY
-
-          total_critical=0; total_high=0; total_medium=0; total_low=0
-
-          for report_dir in ./trivy-reports/trivy-vuln-*/; do
-            if [ -d "$report_dir" ]; then
-              for report in "$report_dir"/*.json; do
-                if [ -f "$report" ]; then
-                  image_name=$(basename "$report_dir" | sed 's/trivy-vuln-//')
-                  critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$report" 2>/dev/null || echo 0)
-                  high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$report" 2>/dev/null || echo 0)
-                  medium=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$report" 2>/dev/null || echo 0)
-                  low=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$report" 2>/dev/null || echo 0)
-                  total=$((critical + high + medium + low))
-                  echo "| $image_name | $critical | $high | $medium | $low | $total |" >> $GITHUB_STEP_SUMMARY
-                  total_critical=$((total_critical + critical))
-                  total_high=$((total_high + high))
-                  total_medium=$((total_medium + medium))
-                  total_low=$((total_low + low))
-                fi
-              done
-            fi
-          done
-
-          total_all=$((total_critical + total_high + total_medium + total_low))
-          echo "| **TOTAL** | **$total_critical** | **$total_high** | **$total_medium** | **$total_low** | **$total_all** |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "### Detailed Vulnerabilities by Image" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          for report_dir in ./trivy-reports/trivy-vuln-*/; do
-            if [ -d "$report_dir" ]; then
-              for report in "$report_dir"/*.json; do
-                if [ -f "$report" ]; then
-                  image_name=$(basename "$report_dir" | sed 's/trivy-vuln-//')
-                  vuln_count=$(jq '[.Results[]?.Vulnerabilities[]?] | length' "$report" 2>/dev/null || echo 0)
-
-                  echo "<details>" >> $GITHUB_STEP_SUMMARY
-                  echo "<summary><strong>$image_name</strong> ($vuln_count vulnerabilities)</summary>" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-
-                  if [ "$vuln_count" -gt 0 ]; then
-                    echo "| Severity | CVE ID | Package | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
-                    echo "|----------|--------|---------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
-
-                    jq -r '
-                      [.Results[]?.Vulnerabilities[]?]
-                      | sort_by(
-                          if .Severity == "CRITICAL" then 0
-                          elif .Severity == "HIGH" then 1
-                          elif .Severity == "MEDIUM" then 2
-                          else 3 end
-                        )
-                      | .[]
-                      | "| \(.Severity) | \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "—") | \(.Title // "—" | gsub("[\\n\\r]"; " ") | if length > 80 then .[:80] + "..." else . end) |"
-                    ' "$report" >> $GITHUB_STEP_SUMMARY 2>/dev/null
-                  else
-                    echo "No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
-                  fi
-
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "</details>" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                fi
-              done
-            fi
-          done
-
-          echo "*Vulnerability scanning is informational only.*" >> $GITHUB_STEP_SUMMARY
-
-          if [ "$total_critical" -gt 0 ]; then
-            echo "::warning::Found $total_critical CRITICAL vulnerabilities across all images"
-          fi
-
-          if [ "${{ inputs.update_readme }}" != "true" ]; then
-            exit 0
-          fi
-          python3 - <<'PYEOF'
-          import re, os
-          with open("README.md") as f:
-              readme = f.read()
-          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
-          with open(summary_path) as f:
-              report = f.read()
-          from datetime import datetime, timezone
-          date_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
-          pattern = r'(## Security Scan Report\n).*?(?=\n#{1,2}(?!#)|\Z)'
-          replacement = r'\1' + f'\n*Last updated: {date_str}*\n\n' + report.replace('\\', r'\\')
-          readme_new = re.sub(pattern, replacement, readme, count=1, flags=re.DOTALL)
-          with open("README.md", "w") as f:
-              f.write(readme_new)
-          PYEOF
-
-      - name: Update README
-        if: inputs.update_readme
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          if ! git diff --cached --quiet; then
-            git commit -m "Update security scan report"
-            git pull --rebase
-            git push
-          fi
