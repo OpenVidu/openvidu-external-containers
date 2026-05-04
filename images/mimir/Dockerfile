@@ -1,4 +1,4 @@
-ARG MIMIR_TAG=3.0.4
+ARG MIMIR_TAG
 
 FROM alpine:3.21 AS mimir-prepeare
 
@@ -6,6 +6,8 @@ ARG MIMIR_TAG
 ARG TARGETARCH
 
 RUN apk add --no-cache ca-certificates curl
+
+RUN : "${MIMIR_TAG:?MIMIR_TAG must be defined}"
 
 RUN set -eux; \
     case "${TARGETARCH}" in \
