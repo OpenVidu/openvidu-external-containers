@@ -1,35 +1,21 @@
 ARG MIMIR_TAG
 
-FROM alpine:3.21 AS mimir-prepeare
+FROM busybox:musl AS shell
 
 ARG MIMIR_TAG
-ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates curl
+FROM grafana/mimir:${MIMIR_TAG}
+COPY --from=shell /bin/busybox /bin/sh
+COPY --from=shell /bin/busybox /usr/bin/grep
+COPY --from=shell /bin/busybox /sbin/nologin
+COPY --from=shell /bin/busybox /usr/bin/id
+COPY --from=shell /bin/busybox /usr/bin/groups
+COPY --from=shell /bin/busybox /usr/bin/head
 
-RUN : "${MIMIR_TAG:?MIMIR_TAG must be defined}"
+# Add mimir user (UID 1001) to /etc/passwd
+RUN echo 'mimir:x:1001:1001:Mimir:/home/mimir:/sbin/nologin' >> /etc/passwd
 
-RUN set -eux; \
-    case "${TARGETARCH}" in \
-      amd64|arm64) ;; \
-      *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
-    esac; \
-    release_base_url="https://github.com/grafana/mimir/releases/download/mimir-${MIMIR_TAG}"; \
-    curl -fsSL "${release_base_url}/mimir-linux-${TARGETARCH}" -o /tmp/mimir; \
-    curl -fsSL "${release_base_url}/mimir-linux-${TARGETARCH}-sha-256" -o /tmp/mimir.sha256; \
-    echo "$(cat /tmp/mimir.sha256)  /tmp/mimir" | sha256sum -c -; \
-    chmod +x /tmp/mimir
-
-FROM alpine:3.21
-
-RUN apk add --no-cache ca-certificates && \
-    addgroup -S -g 1001 mimir && \
-    adduser -S -D -H -u 1001 -G mimir -s /bin/sh mimir
-
-COPY --from=mimir-prepeare /tmp/mimir /bin/mimir
-
-EXPOSE 8080
-
+WORKDIR /
 USER 1001:1001
 
 ENTRYPOINT ["/bin/mimir"]

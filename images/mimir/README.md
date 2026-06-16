@@ -1,29 +1,28 @@
 # openvidu/grafana-mimir
 
-Alpine-based Mimir image that downloads the official `mimir` release binary from Grafana releases.
+`grafana/mimir` image with `/bin/sh` and `grep` for OpenVidu deployment scripts.
 
 ## Why this image?
 
-OpenVidu needs shell availability for operational scripts and a non-root runtime user.
+The official `grafana/mimir` image is distroless — it has no shell. OpenVidu's Mimir entrypoint script uses `/bin/sh` for conditional checks (`grep`, shell operators) before starting the mimir process.
 
 This image provides:
-
-- Official `mimir` Linux release binary fetched from `grafana/mimir` releases
-- SHA-256 verification of the downloaded binary at build time
-- Alpine `/bin/sh` support
-- A runtime user/group with UID/GID `1001:1001`
+- Official `mimir` binary from `grafana/mimir`
+- `/bin/sh` (busybox, statically linked)
+- `grep` (busybox, statically linked)
+- Non-root user with UID/GID `1001:1001`
 
 ## Build
 
 ```bash
 docker build \
-  --build-arg MIMIR_TAG=<tag> \
-  -t openvidu/grafana-mimir:<tag> \
+  --build-arg MIMIR_TAG=<VERSION> \
+  -t openvidu/grafana-mimir:<VERSION> \
   -f images/mimir/Dockerfile \
   .
 ```
 
-Replace `<tag>` with a valid tag from `grafana/mimir` (for example `3.0.4`).
+Where `<VERSION>` is the desired Mimir version.
 
 In CI/release workflows, tags are sourced from `versions.env` and published as:
 
@@ -31,10 +30,8 @@ In CI/release workflows, tags are sourced from `versions.env` and published as:
 - `openvidu/grafana-mimir:${MIMIR_TAG}-r${MIMIR_BUILD_NUMBER}`
 - `openvidu/grafana-mimir:latest`
 
-The build selects the correct binary asset for each platform (`mimir-linux-amd64` / `mimir-linux-arm64`) and verifies it with the corresponding `-sha-256` file.
-
 ## Run
 
 ```bash
-docker run --rm -p 8080:8080 openvidu/grafana-mimir:latest --version
+docker run --rm -p 8080:8080 openvidu/grafana-mimir:latest -config.file=/etc/mimir/local-config.yaml
 ```

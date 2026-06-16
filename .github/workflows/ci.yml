@@ -113,12 +113,15 @@ jobs:
       - name: Smoke test shell
         run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c "echo shell-ok"
 
+      - name: Smoke test grep
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'echo "ok" | /usr/bin/grep "ok" && echo "grep-ok"'
+
       - name: Smoke test runtime user
-        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'uid=$(id -u); gid=$(id -g); [ "$uid:$gid" = "1001:1001" ] && echo "user-ok:$uid:$gid"'
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'grep -q "^mimir:x:1001:1001:" /etc/passwd && echo "user-ok"'
 
       - name: Smoke test mimir binary
         run: |
-          version_output="$(docker run --rm openvidu/grafana-mimir:test --version)"
+          version_output="$(docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'mimir --version 2>&1 | head -1')"
           echo "$version_output"
           case "$version_output" in
             *"Mimir, version "*) ;;
