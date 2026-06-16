@@ -149,10 +149,10 @@ jobs:
         run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c "echo shell-ok"
 
       - name: Smoke test grep
-        run: docker run --rm --entrypoint /usr/bin/grep openvidu/grafana-loki:test -V 2>&1 | head -1
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c 'echo "ok" | /usr/bin/grep "ok" && echo "grep-ok"'
 
       - name: Smoke test runtime user
-        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c 'uid=$(id -u); gid=$(id -g); [ "$uid:$gid" = "10001:10001" ] && echo "user-ok:$uid:$gid"'
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c 'grep -q "^loki:x:10001:10001:" /etc/passwd && echo "user-ok"'
 
       - name: Smoke test loki binary
         run: |
