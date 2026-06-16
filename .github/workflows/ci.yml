@@ -159,7 +159,7 @@ jobs:
           version_output="$(docker run --rm openvidu/grafana-loki:test --version)"
           echo "$version_output"
           case "$version_output" in
-            *"Build date:"*) ;;
+            *"loki, version "*) ;;
             *)
               echo "Unexpected output from loki --version"
               exit 1
