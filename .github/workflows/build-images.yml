@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_loki:
+        description: "Build openvidu/grafana-loki"
+        required: false
+        type: boolean
+        default: false
       update_readme:
         description: "Update README with the security scan report"
         required: false
@@ -55,6 +60,10 @@ jobs:
             context: images/mimir
             file: images/mimir/Dockerfile
             image: openvidu/grafana-mimir
+          - name: loki
+            context: images/loki
+            file: images/loki/Dockerfile
+            image: openvidu/grafana-loki
 
     steps:
       - name: Checkout
@@ -96,6 +105,9 @@ jobs:
           elif [[ "${{ matrix.name }}" == "minio" ]]; then
             echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:${{ env.MINIO_TAG }}-r${{ env.MINIO_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.name }}" == "loki" ]]; then
+            echo "tags=${{ matrix.image }}:${{ env.LOKI_TAG }},${{ matrix.image }}:${{ env.LOKI_TAG }}-r${{ env.LOKI_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
+            echo "build_args=LOKI_TAG=${{ env.LOKI_TAG }}" >> $GITHUB_OUTPUT
           else
             echo "tags=${{ matrix.image }}:${{ env.MIMIR_TAG }},${{ matrix.image }}:${{ env.MIMIR_TAG }}-r${{ env.MIMIR_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
             echo "build_args=MIMIR_TAG=${{ env.MIMIR_TAG }}" >> $GITHUB_OUTPUT
@@ -106,8 +118,9 @@ jobs:
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+          (matrix.name == 'mimir' && inputs.build_mimir) ||
+          (matrix.name == 'loki' && inputs.build_loki)
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
@@ -121,7 +134,8 @@ jobs:
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir)
+          (matrix.name == 'mimir' && inputs.build_mimir) ||
+          (matrix.name == 'loki' && inputs.build_loki)
         run: echo "Secret scan disabled"
         shell: bash
 
@@ -130,7 +144,8 @@ jobs:
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir)
+          (matrix.name == 'mimir' && inputs.build_mimir) ||
+          (matrix.name == 'loki' && inputs.build_loki)
         run: echo "Vulnerability scan disabled"
         shell: bash
 
@@ -140,8 +155,9 @@ jobs:
           (matrix.name == 'minio' && inputs.build_minio) ||
           (matrix.name == 'mc' && inputs.build_mc) ||
           (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir)
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+          (matrix.name == 'mimir' && inputs.build_mimir) ||
+          (matrix.name == 'loki' && inputs.build_loki)
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
