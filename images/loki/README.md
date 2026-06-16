@@ -16,11 +16,13 @@ This image provides:
 
 ```bash
 docker build \
-  --build-arg LOKI_TAG=3.7.2 \
-  -t openvidu/grafana-loki:3.7.2 \
+  --build-arg LOKI_TAG=<VERSION> \
+  -t openvidu/grafana-loki:<VERSION> \
   -f images/loki/Dockerfile \
   .
 ```
+
+Where `<VERSION>` is the desired Loki version.
 
 In CI/release workflows, tags are sourced from `versions.env` and published as:
 
