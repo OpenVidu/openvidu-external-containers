@@ -121,7 +121,7 @@ jobs:
 
       - name: Smoke test mimir binary
         run: |
-          version_output="$(docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'mimir --version 2>&1 | head -1')"
+          version_output="$(docker run --rm --entrypoint /bin/sh openvidu/grafana-mimir:test -c 'mimir --version 2>&1')"
           echo "$version_output"
           case "$version_output" in
             *"Mimir, version "*) ;;
