@@ -127,3 +127,41 @@ jobs:
               exit 1
               ;;
           esac
+
+  test-loki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Load versions
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*$' versions.env >> "$GITHUB_ENV"
+
+      - name: Build image for tests
+        run: |
+          docker build \
+            --build-arg LOKI_TAG="${LOKI_TAG}" \
+            -t openvidu/grafana-loki:test \
+            -f images/loki/Dockerfile \
+            .
+
+      - name: Smoke test shell
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c "echo shell-ok"
+
+      - name: Smoke test grep
+        run: docker run --rm --entrypoint /usr/bin/grep openvidu/grafana-loki:test -V 2>&1 | head -1
+
+      - name: Smoke test runtime user
+        run: docker run --rm --entrypoint /bin/sh openvidu/grafana-loki:test -c 'uid=$(id -u); gid=$(id -g); [ "$uid:$gid" = "10001:10001" ] && echo "user-ok:$uid:$gid"'
+
+      - name: Smoke test loki binary
+        run: |
+          version_output="$(docker run --rm openvidu/grafana-loki:test --version)"
+          echo "$version_output"
+          case "$version_output" in
+            *"Build date:"*) ;;
+            *)
+              echo "Unexpected output from loki --version"
+              exit 1
+              ;;
+          esac
