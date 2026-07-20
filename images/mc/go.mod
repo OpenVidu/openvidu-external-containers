@@ -3,10 +3,10 @@ module github.com/openvidu/mc
 go 1.26
 
 require (
-	github.com/minio/madmin-go/v4 v4.10.0
-	github.com/minio/minio-go/v7 v7.2.0
-	github.com/moby/moby/api v1.54.2
-	github.com/testcontainers/testcontainers-go v0.42.0
+	github.com/minio/madmin-go/v4 v4.10.1
+	github.com/minio/minio-go/v7 v7.2.1
+	github.com/moby/moby/api v1.55.0
+	github.com/testcontainers/testcontainers-go v0.43.0
 )
 
 require (
@@ -34,7 +34,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafana/regexp v0.0.0-20250905093917-f7b3be9d1853 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
@@ -42,6 +42,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
+	github.com/minio/minlz v1.2.0 // indirect
 	github.com/minio/pkg/v3 v3.9.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
