@@ -1,4 +1,4 @@
-FROM golang:1.26.1-alpine AS yq-builder
+FROM golang:1.26-alpine AS yq-builder
 
 ARG YQ_VERSION
 
@@ -11,7 +11,7 @@ RUN apk add --no-cache git && \
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /yq .
 
-FROM golang:1.26.1-alpine AS wait-for-port-builder
+FROM golang:1.26-alpine AS wait-for-port-builder
 
 ARG WAIT_FOR_PORT_COMMIT
 
@@ -24,7 +24,7 @@ RUN apk add --no-cache git && \
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /wait-for-port .
 
-FROM golang:1.26.1-alpine AS render-template-builder
+FROM golang:1.26-alpine AS render-template-builder
 
 ARG RENDER_TEMPLATE_COMMIT
 
