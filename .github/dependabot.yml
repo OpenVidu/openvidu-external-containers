@@ -8,9 +8,6 @@ updates:
       time: "06:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - github-actions
     commit-message:
       prefix: "chore"
       include: "scope"
@@ -27,8 +24,6 @@ updates:
       time: "06:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
     commit-message:
       prefix: "chore"
       include: "scope"
@@ -45,8 +40,6 @@ updates:
       time: "06:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
     commit-message:
       prefix: "chore"
       include: "scope"
