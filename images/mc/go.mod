@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/minio/madmin-go/v4 v4.10.5
 	github.com/minio/minio-go/v7 v7.3.0
-	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/api v1.56.0
 	github.com/testcontainers/testcontainers-go v0.44.0
 )
 
