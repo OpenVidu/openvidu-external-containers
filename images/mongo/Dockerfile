@@ -37,7 +37,7 @@ RUN apk add --no-cache git && \
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /render-template .
 
-FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
 
 ARG MONGODB_MAJOR_MINOR
 ARG MONGODB_VERSION
