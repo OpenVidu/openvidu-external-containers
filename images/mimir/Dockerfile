@@ -1,3 +1,6 @@
+# check=skip=InvalidDefaultArgInFrom
+# MIMIR_TAG has no default on purpose: the version always comes from
+# versions.env, and a default would hide a missing --build-arg.
 ARG MIMIR_TAG
 ARG MIMIR_DIGEST
 FROM grafana/mimir:${MIMIR_TAG}${MIMIR_DIGEST:+@}${MIMIR_DIGEST}

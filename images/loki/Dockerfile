@@ -1,3 +1,6 @@
+# check=skip=InvalidDefaultArgInFrom
+# LOKI_TAG has no default on purpose: the version always comes from
+# versions.env, and a default would hide a missing --build-arg.
 ARG LOKI_TAG
 ARG LOKI_DIGEST
 
