@@ -192,9 +192,7 @@ func startDistributed4(t *testing.T, ctx context.Context) ([]testcontainers.Cont
 				NetworkAliases: map[string][]string{
 					net.Name: {node},
 				},
-				WaitingFor: wait.ForHTTP("/minio/health/live").
-					WithPort("9000/tcp").
-					WithStartupTimeout(120 * time.Second),
+				WaitingFor: distributedNodeReady(),
 			}
 			ctr, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 				ContainerRequest: req,
@@ -240,6 +238,7 @@ func startDistributed4(t *testing.T, ctx context.Context) ([]testcontainers.Cont
 	for _, c := range ctrs {
 		t.Cleanup(func() { c.Terminate(ctx) })
 	}
+	waitForCluster(t, endpoints, 120*time.Second)
 	return ctrs, endpoints
 }
 
@@ -302,9 +301,7 @@ func startDistributedMultiDrive(t *testing.T, ctx context.Context) ([]testcontai
 					testcontainers.BindMount(dataDirs[i*2], "/data-0"),
 					testcontainers.BindMount(dataDirs[i*2+1], "/data-1"),
 				},
-				WaitingFor: wait.ForHTTP("/minio/health/live").
-					WithPort("9000/tcp").
-					WithStartupTimeout(120 * time.Second),
+				WaitingFor: distributedNodeReady(),
 			}
 			ctr, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 				ContainerRequest: req,
@@ -350,7 +347,108 @@ func startDistributedMultiDrive(t *testing.T, ctx context.Context) ([]testcontai
 	for _, c := range ctrs {
 		t.Cleanup(func() { c.Terminate(ctx) })
 	}
+	waitForCluster(t, endpoints, 120*time.Second)
 	return ctrs, endpoints
+}
+
+// distributedNodeReady waits until a distributed node runs its final MinIO
+// process. The setup script first starts a temporary MinIO in the background
+// (to create default buckets) and stops it before starting the real one, so a
+// health check alone can pass against the temporary process just before it
+// goes away. The setup-finished log line is written after it has stopped.
+func distributedNodeReady() wait.Strategy {
+	return wait.ForAll(
+		wait.ForLog("** MinIO setup finished! **").
+			WithStartupTimeout(120*time.Second),
+		wait.ForHTTP("/minio/health/live").
+			WithPort("9000/tcp").
+			WithStartupTimeout(120*time.Second),
+	)
+}
+
+// waitForCluster waits until the cluster serves writes through every node.
+//
+// Health endpoints and ServerInfo are not enough on their own: right after
+// startup they can report every node online with all drives ok while writes
+// through some nodes still fail for several seconds (503 SlowDownWrite, after
+// which the client's retry of a bucket creation gets BucketAlreadyOwnedByYou).
+// So besides those checks, every node must create and remove a bucket, on a
+// few consecutive rounds.
+func waitForCluster(t *testing.T, endpoints []string, timeout time.Duration) {
+	t.Helper()
+	const requiredChecks = 3
+
+	ctx := context.Background()
+	ac := newAdminClient(t, endpoints[0], testUser, testPass)
+	clients := make([]*miniogo.Client, len(endpoints))
+	for i, ep := range endpoints {
+		clients[i] = newS3Client(t, ep, testUser, testPass)
+	}
+	deadline := time.Now().Add(timeout)
+	passed := 0
+	for {
+		reason := clusterNotReady(ctx, ac, endpoints, clients)
+		if reason == "" {
+			passed++
+			if passed == requiredChecks {
+				return
+			}
+		} else {
+			passed = 0
+			if time.Now().After(deadline) {
+				t.Fatalf("MinIO cluster not ready after %v: %s", timeout, reason)
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// clusterNotReady returns why the cluster is not ready yet, or "" when it is.
+func clusterNotReady(ctx context.Context, ac *madmin.AdminClient, endpoints []string, clients []*miniogo.Client) string {
+	for _, ep := range endpoints {
+		resp, err := http.Get(ep + "/minio/health/cluster")
+		if err != nil {
+			return fmt.Sprintf("%s: %v", ep, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Sprintf("%s: cluster health returned %d", ep, resp.StatusCode)
+		}
+	}
+
+	info, err := ac.ServerInfo(ctx)
+	if err != nil {
+		return fmt.Sprintf("server info: %v", err)
+	}
+	if len(info.Servers) != len(endpoints) {
+		return fmt.Sprintf("%d of %d servers in the cluster", len(info.Servers), len(endpoints))
+	}
+	for _, srv := range info.Servers {
+		if !strings.EqualFold(srv.State, "online") {
+			return fmt.Sprintf("server %s is %q", srv.Endpoint, srv.State)
+		}
+		for peer, status := range srv.Network {
+			if !strings.EqualFold(status, "online") {
+				return fmt.Sprintf("server %s: peer %s is %q", srv.Endpoint, peer, status)
+			}
+		}
+		for _, d := range srv.Disks {
+			if !strings.EqualFold(d.State, "ok") {
+				return fmt.Sprintf("server %s: drive %s is %q", srv.Endpoint, d.Endpoint, d.State)
+			}
+		}
+	}
+
+	for i, c := range clients {
+		bucket := fmt.Sprintf("ready-check-%d", time.Now().UnixNano())
+		err := c.MakeBucket(ctx, bucket, miniogo.MakeBucketOptions{})
+		// A failed attempt may still have created the bucket.
+		c.RemoveBucket(ctx, bucket)
+		if err != nil {
+			return fmt.Sprintf("node %d: create bucket: %v", i+1, err)
+		}
+	}
+	return ""
 }
 
 // newS3Client returns a minio-go S3 client pointed at the given endpoint.
