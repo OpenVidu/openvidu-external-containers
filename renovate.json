@@ -9,7 +9,6 @@
   "timezone": "Europe/Madrid",
   "enabledManagers": ["custom.regex", "dockerfile", "github-actions", "gomod"],
   "platformAutomerge": false,
-  "platformCommit": "enabled",
   "postUpdateOptions": ["gomodTidy"],
   "customManagers": [
     {
