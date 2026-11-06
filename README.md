@@ -23,12 +23,4 @@ Image versions live in `versions.env`. [Renovate](https://docs.renovatebot.com/)
 
 MongoDB stays on the release series set by `MONGODB_MAJOR_MINOR`. Moving to a new series means changing that value, `MONGODB_VERSION` and the `allowedVersions` rule in `renovate.json`.
 
-Required secrets:
-
-| Secret | Used by | Purpose |
-|---|---|---|
-| `RENOVATE_TOKEN` | `Renovate` | Fine-grained personal access token for this repository: read and write access to Contents, Pull requests, Issues, Workflows and Commit statuses, read access to Dependabot alerts. |
-| `SLACK_WEBHOOK_URL` | `CI`, `Build and push images`, `Renovate` | Slack incoming webhook for notifications. The optional `SLACK_CHANNEL`, `SLACK_USERNAME` and `SLACK_AVATAR` variables override the channel and the sender. |
-| `DOCKERHUB_TOKEN` | `Build and push images` | Docker Hub access token to publish the images, for the user in the `DOCKERHUB_USERNAME` variable. |
-
 Workflows only run on pushes to this repository, never on pull requests from forks.
