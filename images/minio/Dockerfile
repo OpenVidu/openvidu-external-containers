@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS minio-builder
+FROM golang:1.27-alpine AS minio-builder
 
 ARG MINIO_TAG
 
@@ -18,7 +18,7 @@ RUN COMMIT=$(git rev-parse HEAD) && \
         -X github.com/chainguard-forks/minio/cmd.Edition=agpl" \
       -o /minio .
 
-FROM golang:1.26-alpine AS mc-builder
+FROM golang:1.27-alpine AS mc-builder
 
 WORKDIR /src
 
