@@ -94,6 +94,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.matrix != '[]'
     runs-on: ubuntu-latest
+    # One build per image at a time, so that a build picks its -rN revision
+    # after the previous one has published, and latest ends on the newest
+    # build. When several wait, GitHub keeps only the newest one, which builds
+    # from a commit that already includes the changes of the dropped ones.
+    concurrency:
+      group: build-image-${{ matrix.name }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -192,6 +199,7 @@ jobs:
         shell: bash
 
       - name: Build and push ${{ matrix.name }}
+        id: push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ${{ matrix.context }}
@@ -200,3 +208,19 @@ jobs:
           push: true
           tags: ${{ steps.vars.outputs.tags }}
           build-args: ${{ steps.vars.outputs.build_args }}
+
+      - name: Summary
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAGS: ${{ steps.vars.outputs.tags }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "### Published $IMAGE"
+            echo
+            for tag in ${TAGS//,/ }; do
+              echo "- \`$tag\`"
+            done
+            echo
+            echo "Digest: \`$DIGEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
