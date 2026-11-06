@@ -73,6 +73,14 @@ jobs:
       - name: Run integration tests
         run: go test -count=1 -tags integration -timeout 15m -v ./...
 
+      # The integration tests use the mc binary built on the runner, so build
+      # the published image too: its base image is updated by Renovate.
+      - name: Build image
+        run: docker build -t openvidu/minio-client:test .
+
+      - name: Smoke test mc binary
+        run: docker run --rm --entrypoint /bin/sh openvidu/minio-client:test -c 'test -x /usr/local/bin/mc && echo "mc-ok"'
+
   test-minio:
     runs-on: ubuntu-latest
     defaults:
@@ -106,6 +114,7 @@ jobs:
         run: |
           docker build \
             --build-arg MIMIR_TAG="${MIMIR_TAG}" \
+            --build-arg MIMIR_DIGEST="${MIMIR_DIGEST}" \
             -t openvidu/grafana-mimir:test \
             -f images/mimir/Dockerfile \
             .
@@ -144,6 +153,7 @@ jobs:
         run: |
           docker build \
             --build-arg LOKI_TAG="${LOKI_TAG}" \
+            --build-arg LOKI_DIGEST="${LOKI_DIGEST}" \
             -t openvidu/grafana-loki:test \
             -f images/loki/Dockerfile \
             .

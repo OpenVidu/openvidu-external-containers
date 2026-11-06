@@ -1,0 +1,50 @@
+name: Renovate
+
+# Renovate looks for new versions every Monday and opens or updates its PRs
+# (configuration in renovate.json). It runs again whenever CI passes on one of
+# its branches, so that a green PR is merged right away instead of waiting a
+# week for the next scheduled run.
+#
+# Requires the RENOVATE_TOKEN secret: a fine-grained personal access token for
+# this repository with read and write access to Contents, Pull requests,
+# Issues, Workflows and Commit statuses, and read access to Dependabot
+# alerts (Metadata read is always included). The
+# default GITHUB_TOKEN is not enough: it cannot change workflow files, and
+# pushes and merges made with it do not trigger CI or the image build.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: ["renovate/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    # After CI, only for green runs started by a push to a branch of this
+    # repository. CI is not run for pull requests from forks.
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Renovate
+        uses: renovatebot/github-action@1c0cf989c02653fba0efe7ca5772338860ca71dc # v46.3.12
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: required
+          LOG_LEVEL: info

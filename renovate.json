@@ -1,0 +1,44 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "timezone": "Europe/Madrid",
+  "enabledManagers": ["custom.regex", "dockerfile", "github-actions", "gomod"],
+  "platformAutomerge": false,
+  "postUpdateOptions": ["gomodTidy"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versions in versions.env, annotated with # renovate: comments",
+      "managerFilePatterns": ["/^versions\\.env$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+)\\n[A-Z0-9_]+=(?<currentValue>\\S+)(?:\\n[A-Z0-9_]+_(?:DIGEST|COMMIT)=(?<currentDigest>\\S+))?"
+      ],
+      "versioningTemplate": "{{{versioning}}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "One PR for every non-major update, merged automatically once CI passes. Majors get their own PR and are merged by hand.",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-non-major",
+      "automerge": true
+    },
+    {
+      "description": "Give new releases a few days before proposing them",
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Stay on the MongoDB series set by MONGODB_MAJOR_MINOR in versions.env",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["mongo"],
+      "allowedVersions": "/^8\\.0\\.\\d+$/"
+    }
+  ]
+}

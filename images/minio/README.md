@@ -46,7 +46,7 @@ Replace `<tag>` with a valid release tag from [chainguard-forks/minio](https://g
 In CI/release workflows, tags are sourced from `versions.env` and published as:
 
 - `openvidu/minio:${MINIO_TAG}`
-- `openvidu/minio:${MINIO_TAG}-r${MINIO_BUILD_NUMBER}`
+- `openvidu/minio:${MINIO_TAG}-r<N>`, where `<N>` is the build revision: `0` for the first build of a version, then incremented on every rebuild (for example after a base image update)
 - `openvidu/minio:latest`
 
 ## Run

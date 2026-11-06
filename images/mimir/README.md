@@ -17,17 +17,18 @@ This image provides:
 ```bash
 docker build \
   --build-arg MIMIR_TAG=<VERSION> \
+  --build-arg MIMIR_DIGEST=<DIGEST> \
   -t openvidu/grafana-mimir:<VERSION> \
   -f images/mimir/Dockerfile \
   .
 ```
 
-Where `<VERSION>` is the desired Mimir version.
+Where `<VERSION>` is the desired Mimir version. `<DIGEST>` (`sha256:...`) pins the base image and is optional: drop that line to build from the tag alone.
 
 In CI/release workflows, tags are sourced from `versions.env` and published as:
 
 - `openvidu/grafana-mimir:${MIMIR_TAG}`
-- `openvidu/grafana-mimir:${MIMIR_TAG}-r${MIMIR_BUILD_NUMBER}`
+- `openvidu/grafana-mimir:${MIMIR_TAG}-r<N>`, where `<N>` is the build revision: `0` for the first build of a version, then incremented on every rebuild (for example after a base image update)
 - `openvidu/grafana-mimir:latest`
 
 ## Run
