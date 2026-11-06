@@ -50,6 +50,13 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: required
+          # Docker Hub serves tag pages of 100 and answers page 11 of an
+          # anonymous request with 403, and Renovate then drops every release
+          # date of that image (mongo, golang and grafana/loki have more tags),
+          # so the 3-day minimum age would hold their updates forever. The first
+          # 10 pages hold the most recently pushed tags, the newest release
+          # among them.
+          RENOVATE_DOCKER_MAX_PAGES: "10"
           LOG_LEVEL: info
 
   notify:

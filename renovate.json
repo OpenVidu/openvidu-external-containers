@@ -40,10 +40,9 @@
       "automerge": true
     },
     {
-      "description": "Give new releases a few days before proposing them. Releases without a date are not held back: Docker Hub refuses to list more than 1000 tags, so images with many tags (mongo, golang, grafana/loki) come without release dates and would otherwise wait forever.",
+      "description": "Give new releases a few days before proposing them. Release dates of Docker Hub images need RENOVATE_DOCKER_MAX_PAGES in the Renovate workflow.",
       "matchUpdateTypes": ["major", "minor", "patch"],
-      "minimumReleaseAge": "3 days",
-      "minimumReleaseAgeBehaviour": "timestamp-optional"
+      "minimumReleaseAge": "3 days"
     },
     {
       "description": "Stay on the MongoDB series set by MONGODB_MAJOR_MINOR in versions.env",
