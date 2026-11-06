@@ -1,6 +1,14 @@
 name: Build and push images
 
+# Runs on every push to main that changes an image (Renovate merges included)
+# and builds only the images whose inputs changed. It can also be started by
+# hand to rebuild selected images, for example to pick up base image fixes.
 on:
+  push:
+    branches: [main]
+    paths:
+      - versions.env
+      - images/**
   workflow_dispatch:
     inputs:
       build_minio:
@@ -28,42 +36,68 @@ on:
         required: false
         type: boolean
         default: false
-      update_readme:
-        description: "Update README with the security scan report"
-        required: false
-        type: boolean
-        default: false
+
+permissions:
+  contents: read
 
 env:
   DOCKER_BUILD_SUMMARY: false
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Select images to build
+        id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          BUILD_MINIO: ${{ inputs.build_minio }}
+          BUILD_MC: ${{ inputs.build_mc }}
+          BUILD_MONGO: ${{ inputs.build_mongo }}
+          BUILD_MIMIR: ${{ inputs.build_mimir }}
+          BUILD_LOKI: ${{ inputs.build_loki }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            images=""
+            [[ "$BUILD_MINIO" == "true" ]] && images+=" minio"
+            [[ "$BUILD_MC" == "true" ]] && images+=" mc"
+            [[ "$BUILD_MONGO" == "true" ]] && images+=" mongo"
+            [[ "$BUILD_MIMIR" == "true" ]] && images+=" mimir"
+            [[ "$BUILD_LOKI" == "true" ]] && images+=" loki"
+          else
+            images=$(.github/scripts/changed-images.sh "$BEFORE" "$AFTER")
+          fi
+          echo "Images to build: ${images:-none}"
+
+          matrix=$(jq -cn --arg images "$images" '
+            ($images | split("\\s+"; null) | map(select(length > 0))) as $selected
+            | [
+                {name: "minio", context: ".", file: "images/minio/Dockerfile", image: "openvidu/minio"},
+                {name: "mc", context: "images/mc", file: "images/mc/Dockerfile", image: "openvidu/minio-client"},
+                {name: "mongo", context: "images/mongo", file: "images/mongo/Dockerfile", image: "openvidu/mongodb"},
+                {name: "mimir", context: "images/mimir", file: "images/mimir/Dockerfile", image: "openvidu/grafana-mimir"},
+                {name: "loki", context: "images/loki", file: "images/loki/Dockerfile", image: "openvidu/grafana-loki"}
+              ]
+            | map(select(.name as $name | $selected | index($name)))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changes
+    if: needs.changes.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: minio
-            context: .
-            file: images/minio/Dockerfile
-            image: openvidu/minio
-          - name: mc
-            context: images/mc
-            file: images/mc/Dockerfile
-            image: openvidu/minio-client
-          - name: mongo
-            context: images/mongo
-            file: images/mongo/Dockerfile
-            image: openvidu/mongodb
-          - name: mimir
-            context: images/mimir
-            file: images/mimir/Dockerfile
-            image: openvidu/grafana-mimir
-          - name: loki
-            context: images/loki
-            file: images/loki/Dockerfile
-            image: openvidu/grafana-loki
+        include: ${{ fromJSON(needs.changes.outputs.matrix) }}
 
     steps:
       - name: Checkout
@@ -86,40 +120,60 @@ jobs:
 
       - name: Set build variables
         id: vars
+        env:
+          NAME: ${{ matrix.name }}
+          IMAGE: ${{ matrix.image }}
         run: |
-          if [[ "${{ matrix.name }}" == "mc" ]]; then
-            echo "tags=${{ matrix.image }}:RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
-            echo "build_args=" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.name }}" == "mongo" ]]; then
-            echo "tags=${{ matrix.image }}:${{ env.MONGODB_MAJOR_MINOR }},${{ matrix.image }}:${{ env.MONGODB_VERSION }},${{ matrix.image }}:${{ env.MONGODB_VERSION }}-r${{ env.MONGODB_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
-            {
-              echo "build_args<<EOF"
-              echo "YQ_VERSION=${{ env.YQ_VERSION }}"
-              echo "WAIT_FOR_PORT_COMMIT=${{ env.WAIT_FOR_PORT_COMMIT }}"
-              echo "RENDER_TEMPLATE_COMMIT=${{ env.RENDER_TEMPLATE_COMMIT }}"
-              echo "MONGODB_MAJOR_MINOR=${{ env.MONGODB_MAJOR_MINOR }}"
-              echo "MONGODB_VERSION=${{ env.MONGODB_VERSION }}"
-              echo "MONGOSH_VERSION=${{ env.MONGOSH_VERSION }}"
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.name }}" == "minio" ]]; then
-            echo "tags=${{ matrix.image }}:${{ env.MINIO_TAG }},${{ matrix.image }}:${{ env.MINIO_TAG }}-r${{ env.MINIO_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
-            echo "build_args=MINIO_TAG=${{ env.MINIO_TAG }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.name }}" == "loki" ]]; then
-            echo "tags=${{ matrix.image }}:${{ env.LOKI_TAG }},${{ matrix.image }}:${{ env.LOKI_TAG }}-r${{ env.LOKI_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
-            echo "build_args=LOKI_TAG=${{ env.LOKI_TAG }}" >> $GITHUB_OUTPUT
-          else
-            echo "tags=${{ matrix.image }}:${{ env.MIMIR_TAG }},${{ matrix.image }}:${{ env.MIMIR_TAG }}-r${{ env.MIMIR_BUILD_NUMBER }},${{ matrix.image }}:latest" >> $GITHUB_OUTPUT
-            echo "build_args=MIMIR_TAG=${{ env.MIMIR_TAG }}" >> $GITHUB_OUTPUT
-          fi
+          # Tags published for an image version: <version>, <version>-r<N> and
+          # latest, where N is the next free revision on Docker Hub.
+          version_tags() {
+            local revision
+            revision=$(.github/scripts/next-revision.sh "$IMAGE" "$1")
+            echo "Publishing $IMAGE:$1 as revision r$revision" >&2
+            echo "$IMAGE:$1,$IMAGE:$1-r$revision,$IMAGE:latest"
+          }
+
+          case "$NAME" in
+            mc)
+              tags="$IMAGE:RELEASE.$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+              build_args=""
+              ;;
+            mongo)
+              tags="$IMAGE:$MONGODB_MAJOR_MINOR,$(version_tags "$MONGODB_VERSION")"
+              build_args=$(printf '%s\n' \
+                "YQ_VERSION=$YQ_VERSION" \
+                "WAIT_FOR_PORT_COMMIT=$WAIT_FOR_PORT_COMMIT" \
+                "RENDER_TEMPLATE_COMMIT=$RENDER_TEMPLATE_COMMIT" \
+                "MONGODB_MAJOR_MINOR=$MONGODB_MAJOR_MINOR" \
+                "MONGODB_VERSION=$MONGODB_VERSION" \
+                "MONGOSH_VERSION=$MONGOSH_VERSION")
+              ;;
+            minio)
+              tags=$(version_tags "$MINIO_TAG")
+              build_args="MINIO_TAG=$MINIO_TAG"
+              ;;
+            loki)
+              tags=$(version_tags "$LOKI_TAG")
+              build_args=$(printf '%s\n' "LOKI_TAG=$LOKI_TAG" "LOKI_DIGEST=$LOKI_DIGEST")
+              ;;
+            mimir)
+              tags=$(version_tags "$MIMIR_TAG")
+              build_args=$(printf '%s\n' "MIMIR_TAG=$MIMIR_TAG" "MIMIR_DIGEST=$MIMIR_DIGEST")
+              ;;
+            *)
+              echo "Unknown image: $NAME" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          {
+            echo "build_args<<EOF"
+            echo "$build_args"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build ${{ matrix.name }} for scanning
-        if: |
-          (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir) ||
-          (matrix.name == 'loki' && inputs.build_loki)
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: ${{ matrix.context }}
@@ -130,33 +184,14 @@ jobs:
           build-args: ${{ steps.vars.outputs.build_args }}
 
       - name: Scan for secrets
-        if: |
-          (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir) ||
-          (matrix.name == 'loki' && inputs.build_loki)
         run: echo "Secret scan disabled"
         shell: bash
 
       - name: Scan for vulnerabilities
-        if: |
-          (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir) ||
-          (matrix.name == 'loki' && inputs.build_loki)
         run: echo "Vulnerability scan disabled"
         shell: bash
 
-
       - name: Build and push ${{ matrix.name }}
-        if: |
-          (matrix.name == 'minio' && inputs.build_minio) ||
-          (matrix.name == 'mc' && inputs.build_mc) ||
-          (matrix.name == 'mongo' && inputs.build_mongo) ||
-          (matrix.name == 'mimir' && inputs.build_mimir) ||
-          (matrix.name == 'loki' && inputs.build_loki)
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: ${{ matrix.context }}

@@ -17,17 +17,18 @@ This image provides:
 ```bash
 docker build \
   --build-arg LOKI_TAG=<VERSION> \
+  --build-arg LOKI_DIGEST=<DIGEST> \
   -t openvidu/grafana-loki:<VERSION> \
   -f images/loki/Dockerfile \
   .
 ```
 
-Where `<VERSION>` is the desired Loki version.
+Where `<VERSION>` is the desired Loki version. `<DIGEST>` (`sha256:...`) pins the base image and is optional: drop that line to build from the tag alone.
 
 In CI/release workflows, tags are sourced from `versions.env` and published as:
 
 - `openvidu/grafana-loki:${LOKI_TAG}`
-- `openvidu/grafana-loki:${LOKI_TAG}-r${LOKI_BUILD_NUMBER}`
+- `openvidu/grafana-loki:${LOKI_TAG}-r<N>`, where `<N>` is the build revision: `0` for the first build of a version, then incremented on every rebuild (for example after a base image update)
 - `openvidu/grafana-loki:latest`
 
 ## Run
