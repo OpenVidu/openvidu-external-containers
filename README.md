@@ -29,6 +29,6 @@ Required secrets:
 |---|---|---|
 | `RENOVATE_TOKEN` | `Renovate` | Fine-grained personal access token for this repository: read and write access to Contents, Pull requests, Issues, Workflows and Commit statuses, read access to Dependabot alerts. |
 | `SLACK_WEBHOOK_URL` | `CI`, `Build and push images`, `Renovate` | Slack incoming webhook for notifications. The optional `SLACK_CHANNEL`, `SLACK_USERNAME` and `SLACK_AVATAR` variables override the channel and the sender. |
-| `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | `Build and push images` | Docker Hub credentials to publish the images. |
+| `DOCKERHUB_TOKEN` | `Build and push images` | Docker Hub access token to publish the images, for the user in the `DOCKERHUB_USERNAME` variable. |
 
 Workflows only run on pushes to this repository, never on pull requests from forks.

@@ -20,6 +20,15 @@
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+)\\n[A-Z0-9_]+=(?<currentValue>\\S+)(?:\\n[A-Z0-9_]+_(?:DIGEST|COMMIT)=(?<currentDigest>\\S+))?"
       ],
       "versioningTemplate": "{{{versioning}}}"
+    },
+    {
+      "customType": "regex",
+      "description": "Renovate version run by the Renovate workflow",
+      "managerFilePatterns": ["/^\\.github/workflows/renovate\\.yml$/"],
+      "matchStrings": ["renovate-version: (?<currentValue>\\S+)"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "renovatebot/renovate",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [

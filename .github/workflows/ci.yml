@@ -4,6 +4,12 @@ on:
   push:
   workflow_dispatch:
 
+# CI runs third-party code before it is merged (Go modules in the tests, base
+# images in the builds of Renovate's branches), so its token must not be able
+# to write to the repository.
+permissions:
+  contents: read
+
 jobs:
   test-mongo:
     runs-on: ubuntu-latest
