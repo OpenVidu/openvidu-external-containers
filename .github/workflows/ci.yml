@@ -178,3 +178,44 @@ jobs:
               exit 1
               ;;
           esac
+
+  # Failures on main, and on Renovate's grouped PR (which blocks the weekly
+  # automerge), go to Slack. Other branches, including Renovate's major update
+  # PRs, are reviewed by hand and stay silent.
+  notify:
+    needs: [test-mongo, test-mc, test-minio, test-mimir, test-loki]
+    if: >-
+      failure() && (
+        github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/renovate/all-non-major'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build message
+        id: message
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          failed=$(jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")' <<<"$NEEDS")
+          {
+            echo "text<<EOF"
+            echo "CI FAILED in $GITHUB_REPOSITORY ($GITHUB_EVENT_NAME on $GITHUB_REF_NAME)."
+            echo "Failed jobs: $failed"
+            echo "Run: $RUN_URL"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Slack notification
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: failure
+          title: CI FAILED
+          message: ${{ steps.message.outputs.text }}
+          channel: ${{ vars.SLACK_CHANNEL }}
+          username: ${{ vars.SLACK_USERNAME }}
+          icon: ${{ vars.SLACK_AVATAR }}

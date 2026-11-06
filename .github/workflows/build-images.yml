@@ -224,3 +224,55 @@ jobs:
             echo
             echo "Digest: \`$DIGEST\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Every build that publishes images, or fails, goes to Slack. Builds
+  # cancelled because a newer one of the same image replaced them stay silent.
+  notify:
+    needs: [changes, build]
+    if: >-
+      always() && (
+        needs.changes.result == 'failure' ||
+        needs.build.result == 'failure' ||
+        needs.build.result == 'success'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build message
+        id: message
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          MATRIX: ${{ needs.changes.outputs.matrix }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          images=$(jq -r 'map(.image) | join(", ")' <<<"${MATRIX:-[]}")
+          if [[ "$CHANGES_RESULT" == "success" && "$BUILD_RESULT" == "success" ]]; then
+            result=success
+            title="Images published"
+          else
+            result=failure
+            title="Build and push images FAILED"
+          fi
+          {
+            echo "status=$result"
+            echo "title=$title"
+            echo "text<<EOF"
+            echo "The result of the workflow is '$result'."
+            echo "Images: ${images:-none selected}"
+            echo "See the details at $RUN_URL"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Slack notification
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ steps.message.outputs.status }}
+          title: ${{ steps.message.outputs.title }}
+          message: ${{ steps.message.outputs.text }}
+          channel: ${{ vars.SLACK_CHANNEL }}
+          username: ${{ vars.SLACK_USERNAME }}
+          icon: ${{ vars.SLACK_AVATAR }}

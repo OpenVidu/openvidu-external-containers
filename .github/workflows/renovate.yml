@@ -48,3 +48,24 @@ jobs:
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: required
           LOG_LEVEL: info
+
+  notify:
+    needs: renovate
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Slack notification
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: failure
+          title: Renovate FAILED
+          message: |-
+            Renovate FAILED in ${{ github.repository }} (${{ github.event_name }}).
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          channel: ${{ vars.SLACK_CHANNEL }}
+          username: ${{ vars.SLACK_USERNAME }}
+          icon: ${{ vars.SLACK_AVATAR }}

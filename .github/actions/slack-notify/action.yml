@@ -1,0 +1,53 @@
+name: Slack notification
+description: >-
+  Posts the result of the current workflow run to Slack in the same format as
+  the other OpenVidu workflows (rtCamp/action-slack-notify: ref, event, run and
+  commit fields, with a green or red bar). Skipped with a warning when no
+  webhook is configured.
+
+inputs:
+  webhook:
+    description: Slack incoming webhook URL
+    required: true
+  status:
+    description: "success or failure: sets the color of the message"
+    required: true
+  title:
+    description: Message title
+    required: true
+  message:
+    description: Message body
+    required: true
+  channel:
+    description: Channel override (optional)
+    required: false
+    default: ""
+  username:
+    description: Sender name override (optional)
+    required: false
+    default: ""
+  icon:
+    description: Sender avatar URL override (optional)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Slack not configured
+      if: inputs.webhook == ''
+      shell: bash
+      run: echo "::warning::SLACK_WEBHOOK_URL is not set, skipping the Slack notification"
+
+    - name: Post to Slack
+      if: inputs.webhook != ''
+      uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58 # v2.4.0
+      env:
+        SLACK_WEBHOOK: ${{ inputs.webhook }}
+        SLACK_COLOR: ${{ inputs.status }}
+        SLACK_TITLE: ${{ inputs.title }}
+        SLACK_MESSAGE: ${{ inputs.message }}
+        SLACK_CHANNEL: ${{ inputs.channel }}
+        SLACK_USERNAME: ${{ inputs.username }}
+        SLACK_ICON: ${{ inputs.icon }}
+        SLACK_FOOTER: ""
