@@ -22,6 +22,8 @@ on:
 
 permissions:
   contents: read
+  # To list the PRs Renovate merged in the run, for Slack.
+  pull-requests: read
 
 concurrency:
   group: renovate
@@ -38,7 +40,13 @@ jobs:
         github.event.workflow_run.head_repository.full_name == github.repository
       )
     runs-on: ubuntu-latest
+    outputs:
+      start: ${{ steps.start.outputs.time }}
     steps:
+      - name: Note the start of the run
+        id: start
+        run: echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Run Renovate
         uses: renovatebot/github-action@1c0cf989c02653fba0efe7ca5772338860ca71dc # v46.3.12
         with:
@@ -59,15 +67,50 @@ jobs:
           RENOVATE_DOCKER_MAX_PAGES: "10"
           LOG_LEVEL: info
 
+  # Slack gets the PRs Renovate merged in the run, and its failures.
   notify:
     needs: renovate
-    if: failure()
+    if: always() && (needs.renovate.result == 'success' || needs.renovate.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Slack notification
+      - name: List the PRs Renovate merged
+        id: merged
+        if: needs.renovate.result == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_START: ${{ needs.renovate.outputs.start }}
+        run: |
+          merged=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 50 \
+            --search "merged:>=$RUN_START" --json number,title,url,headRefName \
+            --jq '.[] | select(.headRefName | startswith("renovate/"))
+                       | "- \(.title) (#\(.number)): \(.url)"')
+          echo "$merged"
+          {
+            echo "list<<EOF"
+            echo "$merged"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Slack notification (Renovate merged)
+        if: steps.merged.outputs.list != ''
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: success
+          title: Renovate merged
+          message: |-
+            Renovate merged in ${{ github.repository }}:
+            ${{ steps.merged.outputs.list }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          channel: ${{ vars.SLACK_CHANNEL }}
+          username: ${{ vars.SLACK_USERNAME }}
+          icon: ${{ vars.SLACK_AVATAR }}
+
+      - name: Slack notification (Renovate failed)
+        if: needs.renovate.result == 'failure'
         uses: ./.github/actions/slack-notify
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
