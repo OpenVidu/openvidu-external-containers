@@ -11,6 +11,8 @@
   "platformAutomerge": false,
   "prHourlyLimit": 0,
   "postUpdateOptions": ["gomodTidy"],
+  "dependencyDashboardTitle": "Dependency Dashboard: major versions on request",
+  "dependencyDashboardHeader": "**This issue is the control panel for major version updates.**\n\nRenovate merges minor and patch updates by itself once CI passes, all in one PR, and the merge rebuilds and publishes the images it changes. A **major** version never opens a PR by itself, since it may need code changes:\n\n- New majors wait under **Pending Approval**.\n- Majors whose PR was closed wait under **PR Closed (Blocked)**.\n\n**Tick a major to open its PR**, then review and merge it by hand: its CI runs as on any PR, but nothing merges it automatically and its failures are not posted to Slack. The other sections are informative: *Pending Status Checks* lists updates still within their 3-day minimum release age, *Open* the open PRs, and *Detected Dependencies* everything Renovate tracks.",
   "customManagers": [
     {
       "customType": "regex",
@@ -33,11 +35,17 @@
   ],
   "packageRules": [
     {
-      "description": "One PR for every non-major update, merged automatically once CI passes. Majors get their own PR and are merged by hand.",
+      "description": "One PR for every non-major update, merged automatically once CI passes.",
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-non-major",
       "automerge": true
+    },
+    {
+      "description": "A new major is a decision taken by hand. It opens no PR: the Dependency Dashboard lists it with a checkbox, and ticking it opens its own PR, never merged automatically.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "dependencyDashboardApproval": true
     },
     {
       "description": "Give new releases a few days before proposing them. Release dates of Docker Hub images need RENOVATE_DOCKER_MAX_PAGES in the Renovate workflow.",
