@@ -6,8 +6,9 @@ set -e
 ARCH=$(dpkg --print-architecture)
 UBUNTU_CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d'=' -f2)
 
-# Install dependencies
-apt-get update && apt-get install -y wget gnupg curl
+# Apply the security updates published after the base image was built, then
+# install the dependencies
+apt-get update && apt-get upgrade -y && apt-get install -y wget gnupg curl
 
 # Create directory for MongoDB binaries
 mkdir -p /opt/bitnami/mongodb/bin

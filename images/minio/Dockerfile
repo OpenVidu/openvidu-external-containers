@@ -7,6 +7,15 @@ WORKDIR /src
 RUN apk add --no-cache git && \
     git clone --depth 1 --branch "${MINIO_TAG}" https://github.com/chainguard-forks/minio.git .
 
+# The fork pins github.com/apache/thrift with a replace directive to a commit
+# before v0.24.0, which carries the security fix; v0.24.0 contains that commit.
+# Empty it once a MinIO release replaces thrift with v0.24.0 or later.
+ARG MINIO_THRIFT_REPLACE="github.com/apache/thrift@v0.24.0"
+RUN if [ -n "${MINIO_THRIFT_REPLACE}" ]; then \
+      go mod edit -replace "github.com/apache/thrift=${MINIO_THRIFT_REPLACE}" && \
+      go mod download github.com/apache/thrift; \
+    fi
+
 RUN COMMIT=$(git rev-parse HEAD) && \
     SHORT_COMMIT=$(git rev-parse --short HEAD) && \
     CGO_ENABLED=0 go build -tags kqueue -trimpath \
