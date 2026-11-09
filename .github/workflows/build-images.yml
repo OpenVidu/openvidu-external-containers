@@ -81,13 +81,14 @@ jobs:
           matrix=$(jq -cn --arg images "$images" '
             ($images | split("\\s+"; null) | map(select(length > 0))) as $selected
             | [
-                {name: "minio", context: ".", file: "images/minio/Dockerfile", image: "openvidu/minio"},
-                {name: "mc", context: "images/mc", file: "images/mc/Dockerfile", image: "openvidu/minio-client"},
-                {name: "mongo", context: "images/mongo", file: "images/mongo/Dockerfile", image: "openvidu/mongodb"},
-                {name: "mimir", context: "images/mimir", file: "images/mimir/Dockerfile", image: "openvidu/grafana-mimir"},
-                {name: "loki", context: "images/loki", file: "images/loki/Dockerfile", image: "openvidu/grafana-loki"}
+                {name: "minio", source: "minio", context: ".", file: "images/minio/Dockerfile", image: "openvidu/minio", target: ""},
+                {name: "mc", source: "mc", context: "images/mc", file: "images/mc/Dockerfile", image: "openvidu/minio-client", target: ""},
+                {name: "mongo", source: "mongo", context: "images/mongo", file: "images/mongo/Dockerfile", image: "openvidu/mongodb", target: ""},
+                {name: "mongo-compat", source: "mongo", context: "images/mongo", file: "images/mongo/Dockerfile", image: "openvidu/mongodb", target: "compat"},
+                {name: "mimir", source: "mimir", context: "images/mimir", file: "images/mimir/Dockerfile", image: "openvidu/grafana-mimir", target: ""},
+                {name: "loki", source: "loki", context: "images/loki", file: "images/loki/Dockerfile", image: "openvidu/grafana-loki", target: ""}
               ]
-            | map(select(.name as $name | $selected | index($name)))')
+            | map(select(.source as $source | $selected | index($source)))')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build:
@@ -155,6 +156,20 @@ jobs:
                 "MONGODB_VERSION=$MONGODB_VERSION" \
                 "MONGOSH_VERSION=$MONGOSH_VERSION")
               ;;
+            mongo-compat)
+              # The -compat variant: <major.minor>-compat, <version>-compat and
+              # <version>-compat-r<N>, never latest.
+              revision=$(.github/scripts/next-revision.sh "$IMAGE" "$MONGODB_VERSION-compat")
+              echo "Publishing $IMAGE:$MONGODB_VERSION-compat as revision r$revision" >&2
+              tags="$IMAGE:$MONGODB_MAJOR_MINOR-compat,$IMAGE:$MONGODB_VERSION-compat,$IMAGE:$MONGODB_VERSION-compat-r$revision"
+              build_args=$(printf '%s\n' \
+                "YQ_VERSION=$YQ_VERSION" \
+                "WAIT_FOR_PORT_COMMIT=$WAIT_FOR_PORT_COMMIT" \
+                "RENDER_TEMPLATE_COMMIT=$RENDER_TEMPLATE_COMMIT" \
+                "MONGODB_MAJOR_MINOR=$MONGODB_MAJOR_MINOR" \
+                "MONGODB_VERSION=$MONGODB_VERSION" \
+                "MONGOSH_VERSION=$MONGOSH_VERSION")
+              ;;
             minio)
               tags=$(version_tags "$MINIO_TAG")
               build_args="MINIO_TAG=$MINIO_TAG"
@@ -185,6 +200,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
           load: true
           push: false
           tags: ${{ matrix.image }}:scan
@@ -204,6 +220,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.vars.outputs.tags }}

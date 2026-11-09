@@ -27,7 +27,7 @@ while IFS= read -r file; do
     images/mc/Dockerfile) mark mc ;;
     images/mc/go.mod | images/mc/go.sum | images/mc/*.go) mark mc minio ;;
     images/minio/Dockerfile | images/minio/prebuildfs/* | images/minio/rootfs/*) mark minio ;;
-    images/mongo/Dockerfile | images/mongo/install.sh | images/mongo/prebuildfs/* | images/mongo/rootfs/*) mark mongo ;;
+    images/mongo/Dockerfile | images/mongo/install.sh | images/mongo/prebuildfs/* | images/mongo/rootfs/* | images/mongo/compat/*) mark mongo ;;
     images/loki/Dockerfile) mark loki ;;
     images/mimir/Dockerfile) mark mimir ;;
   esac

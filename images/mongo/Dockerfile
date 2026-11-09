@@ -37,7 +37,7 @@ RUN apk add --no-cache git && \
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /render-template .
 
-FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852 AS mongodb
 
 ARG MONGODB_MAJOR_MINOR
 ARG MONGODB_VERSION
@@ -74,3 +74,24 @@ EXPOSE 27017
 USER 1001
 ENTRYPOINT [ "/opt/bitnami/scripts/mongodb/entrypoint.sh" ]
 CMD [ "/opt/bitnami/scripts/mongodb/run.sh" ]
+
+# -compat variant (--target compat): the same MongoDB, run the way the official
+# mongo image runs it, for deployments written for that image. The entrypoint
+# starts as root, hands /data/db and /data/configdb to the mongodb user (UID and
+# GID 999, as in the official image) and drops to it with setpriv.
+FROM mongodb AS compat
+USER root
+RUN groupmod -g 999 mongodb && \
+    usermod -u 999 -g 999 -d /data/db mongodb && \
+    mkdir -p /data/db /data/configdb /docker-entrypoint-initdb.d && \
+    chown mongodb:mongodb /data/db /data/configdb && \
+    ln -s /opt/bitnami/mongodb/bin/mongosh /usr/local/bin/mongosh
+COPY compat/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENV HOME=/data/db
+VOLUME [ "/data/db", "/data/configdb" ]
+EXPOSE 27017
+ENTRYPOINT [ "docker-entrypoint.sh" ]
+CMD [ "mongod" ]
+
+# The default target stays the Bitnami-style image above
+FROM mongodb

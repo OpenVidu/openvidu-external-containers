@@ -30,6 +30,28 @@ The image supports the same main environment variables used by the Bitnami Mongo
 
 All these variables also support a `_FILE` suffix variant (for example `MONGODB_ROOT_PASSWORD_FILE`) to read values from files/secrets.
 
+## The -compat variant
+
+`openvidu/mongodb:<version>-compat` (and `<major.minor>-compat`, `<version>-compat-r<N>`) is the same
+MongoDB, run the way the official `mongo` image runs it, for deployments written for that image:
+
+```bash
+docker run -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+  -v mongo_data:/data/db openvidu/mongodb:8.0-compat \
+  mongod --replSet rs0 --keyFile /data/replica.key
+```
+
+- The entrypoint, `docker-entrypoint.sh`, takes `mongod` and its options. Started as root, it hands
+  `/data/db` and `/data/configdb` to the `mongodb` user (UID and GID 999, as in the official image)
+  and drops to it with `setpriv`.
+- `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD` create the root user when the data
+  directory is empty, on a temporary `mongod` on `127.0.0.1:27017` without `--auth`, `--keyFile` and
+  `--replSet`; the `*.sh` and `*.js` files of `/docker-entrypoint-initdb.d` run against it afterwards.
+  The final `mongod` gets `--auth` when there is a root user.
+- The data directory is compatible with the official image in both directions.
+
+Build it with `--target compat`. The `MONGODB_*` variables above apply to the default variant only.
+
 ## Build
 
 ```bash
@@ -71,4 +93,4 @@ docker compose -f docker-compose-replicaset.yml up
 
 ## Tests
 
-The image includes a BATS integration suite under `images/mongo/tests` that covers standalone, auth, custom users, replica set, init scripts, persistence, custom port, docker secrets, and startup validation.
+The image includes a BATS integration suite under `images/mongo/tests` that covers standalone, auth, custom users, replica set, init scripts, persistence, custom port, docker secrets, and startup validation. `10-compat.bats` covers the -compat variant (`MONGODB_COMPAT_IMAGE`), including data written by the official image (`MONGODB_OFFICIAL_IMAGE`) and back.

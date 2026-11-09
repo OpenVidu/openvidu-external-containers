@@ -39,6 +39,16 @@ jobs:
             --build-arg MONGOSH_VERSION="${MONGOSH_VERSION}" \
             -t openvidu/mongodb:test \
             .
+          docker build \
+            --target compat \
+            --build-arg YQ_VERSION="${YQ_VERSION}" \
+            --build-arg WAIT_FOR_PORT_COMMIT="${WAIT_FOR_PORT_COMMIT}" \
+            --build-arg RENDER_TEMPLATE_COMMIT="${RENDER_TEMPLATE_COMMIT}" \
+            --build-arg MONGODB_MAJOR_MINOR="${MONGODB_MAJOR_MINOR}" \
+            --build-arg MONGODB_VERSION="${MONGODB_VERSION}" \
+            --build-arg MONGOSH_VERSION="${MONGOSH_VERSION}" \
+            -t openvidu/mongodb:test-compat \
+            .
 
       - name: Install BATS
         run: sudo apt-get update && sudo apt-get install -y bats
@@ -46,7 +56,8 @@ jobs:
       - name: Run integration tests
         env:
           MONGODB_IMAGE: openvidu/mongodb:test
-        run: tests/run-tests.sh
+          MONGODB_COMPAT_IMAGE: openvidu/mongodb:test-compat
+        run: MONGODB_OFFICIAL_IMAGE="mongo:${MONGODB_VERSION}" tests/run-tests.sh
 
       - name: Dump container logs on failure
         if: failure()
