@@ -23,7 +23,7 @@ setup_file() {
 }
 
 teardown_file() {
-    docker rm -f "$NAME" "$NAME-official" >/dev/null 2>&1 || true
+    docker rm -f "$NAME" "$NAME-official" "$NAME-bind" >/dev/null 2>&1 || true
     docker run --rm -v "$WORK:/w" busybox rm -rf /w/data /w/configdb /w/initdb /w/replica.key 2>/dev/null || true
     rmdir "$WORK" 2>/dev/null || true
 }
@@ -66,6 +66,29 @@ wait_primary() {
     [[ "$output" == *"root"* ]]
     run rs_eval "$NAME" 'print(db.getSiblingDB("app").seed.countDocuments())'
     [[ "$output" == *"1"* ]]
+}
+
+@test "compat: mongod listens on every address, as the official image does" {
+    local ip
+    ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$NAME")"
+    run docker exec "$NAME" mongosh --quiet --host "$ip" -u admin -p secret123 --authenticationDatabase admin \
+        --eval 'print(db.runCommand({ ping: 1 }).ok)'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"1"* ]]
+}
+
+@test "compat: an explicit --bind_ip is kept" {
+    docker run -d --name "$NAME-bind" "$COMPAT_IMAGE" mongod --bind_ip 127.0.0.1 >/dev/null
+    local elapsed=0
+    until docker exec "$NAME-bind" mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' >/dev/null 2>&1; do
+        [[ $elapsed -lt 60 ]] || break
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    run docker exec "$NAME-bind" ps -o args= -C mongod
+    docker rm -f "$NAME-bind" >/dev/null
+    [[ "$output" == *"--bind_ip 127.0.0.1"* ]]
+    [[ "$output" != *"--bind_ip_all"* ]]
 }
 
 @test "compat: authentication is enforced" {

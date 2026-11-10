@@ -11,7 +11,8 @@
 #   on 127.0.0.1:27017 without --auth, --keyFile and --replSet. The *.sh and
 #   *.js files of /docker-entrypoint-initdb.d run against it afterwards.
 # - The final mongod gets the options as given, plus --auth when there is a
-#   root user.
+#   root user, and --bind_ip_all when neither the options nor the --config
+#   file set the addresses to listen on, as the official image does.
 set -Eeuo pipefail
 
 if [ "${1:0:1}" = '-' ]; then
@@ -131,6 +132,13 @@ fi
 
 if [ -n "$has_root_user" ] && ! printf '%s\n' "$@" | grep -qx -- '--auth'; then
 	set -- "$@" --auth
+fi
+
+# mongod listens on localhost only unless told otherwise
+config_file="$(arg_value --config "$@" || arg_value -f "$@" || true)"
+if ! printf '%s\n' "$@" | grep -qE -- '^--bind_ip(_all)?(=|$)' &&
+	! { [ -n "$config_file" ] && grep -qE '^[[:space:]]*bindIp(All)?[[:space:]]*:' "$config_file"; }; then
+	set -- "$@" --bind_ip_all
 fi
 
 exec "$@"
