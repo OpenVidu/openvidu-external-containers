@@ -49,8 +49,9 @@ mc_module_changed=
 while IFS= read -r file; do
   case "$file" in
     images/mc/*_test.go) ;;
-    # The minio image embeds the mc client built from images/mc.
     images/mc/Dockerfile) mark mc ;;
+    # The minio image embeds the mc client built from images/mc, so a change
+    # of the mc binary rebuilds both (decided after the loop).
     images/mc/go.mod | images/mc/go.sum | images/mc/*.go) mc_module_changed=1 ;;
     images/minio/Dockerfile | images/minio/prebuildfs/* | images/minio/rootfs/*) mark minio ;;
     images/mongo/Dockerfile | images/mongo/install.sh | images/mongo/prebuildfs/* | images/mongo/rootfs/* | images/mongo/compat/*) mark mongo ;;
