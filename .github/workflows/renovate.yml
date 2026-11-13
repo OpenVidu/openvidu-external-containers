@@ -1,9 +1,9 @@
 name: Renovate
 
-# Renovate looks for new versions every Monday and opens or updates its PRs
+# Renovate looks for new versions every day and opens or updates its PRs
 # (configuration in renovate.json). It runs again whenever CI passes on one of
 # its branches, so that a green PR is merged right away instead of waiting a
-# week for the next scheduled run.
+# day for the next scheduled run.
 #
 # Requires the RENOVATE_TOKEN secret: a fine-grained personal access token for
 # this repository with read and write access to Contents, Pull requests,
@@ -13,7 +13,7 @@ name: Renovate
 # pushes and merges made with it do not trigger CI or the image build.
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * *"
   workflow_run:
     workflows: [CI]
     types: [completed]
