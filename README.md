@@ -16,7 +16,7 @@ Purpose-built container images used by OpenVidu deployments.
 
 Image versions live in `versions.env`. [Renovate](https://docs.renovatebot.com/) keeps them, the base images of the Dockerfiles, the Go modules and the GitHub Actions up to date (configuration in `renovate.json`):
 
-1. Every day the `Renovate` workflow looks for releases that are at least 3 days old.
+1. Every 3 days the `Renovate` workflow looks for releases that are at least 3 days old.
 2. All minor, patch and digest updates go into a single PR, which Renovate merges once CI passes. A major update opens no PR: it waits in the Dependency Dashboard issue, where ticking it opens its PR, to review and merge by hand.
 3. Every push to `main` that changes an image runs `Build and push images`, which builds only the images whose contents changed and publishes `<version>`, `<version>-r<N>` and `latest`. `<N>` is the next free build revision on Docker Hub. Updates that do not reach an image publish nothing: Renovate itself, GitHub Actions, the Go modules of the tests, and the Go modules of `images/mc` that the `mc` binary does not link (`.github/scripts/changed-images.sh` decides).
 4. Slack gets every image build, published or failed, the PRs Renovate merges, and the failures of Renovate and of CI on `main` or on Renovate's grouped PR. CI failures on major update PRs, which are merged by hand, are not posted.

@@ -1,9 +1,9 @@
 name: Renovate
 
-# Renovate looks for new versions every day and opens or updates its PRs
+# Renovate looks for new versions every 3 days and opens or updates its PRs
 # (configuration in renovate.json). It runs again whenever CI passes on one of
-# its branches, so that a green PR is merged right away instead of waiting a
-# day for the next scheduled run.
+# its branches, so that a green PR is merged right away instead of waiting
+# up to 3 days for the next scheduled run.
 #
 # Requires the RENOVATE_TOKEN secret: a fine-grained personal access token for
 # this repository with read and write access to Contents, Pull requests,
@@ -13,7 +13,9 @@ name: Renovate
 # pushes and merges made with it do not trigger CI or the image build.
 on:
   schedule:
-    - cron: "0 6 * * *"
+    # Days 1, 4, 7... of the month. The Renovate of openvidu-deployment runs the day
+    # after, so the openvidu/* tags published here reach its manifest on its next run.
+    - cron: "0 6 */3 * *"
   workflow_run:
     workflows: [CI]
     types: [completed]
