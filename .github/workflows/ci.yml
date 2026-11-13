@@ -196,9 +196,9 @@ jobs:
               ;;
           esac
 
-  # Failures on main, and on Renovate's grouped PR (which blocks the weekly
-  # automerge), go to Slack. Other branches, including Renovate's major update
-  # PRs, are reviewed by hand and stay silent.
+  # Failures on main, and on Renovate's grouped PR (which blocks its
+  # automerge), go to Slack with a link to the PR. Other branches, including
+  # Renovate's major update PRs, are reviewed by hand and stay silent.
   notify:
     needs: [test-mongo, test-mc, test-minio, test-mimir, test-loki]
     if: >-
@@ -207,6 +207,10 @@ jobs:
         github.ref == 'refs/heads/renovate/all-non-major'
       )
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # To find the PR of the tested commit.
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -214,14 +218,23 @@ jobs:
       - name: Build message
         id: message
         env:
+          GH_TOKEN: ${{ github.token }}
           NEEDS: ${{ toJSON(needs) }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           failed=$(jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")' <<<"$NEEDS")
+          # The PR of the tested commit: Renovate's open PR on its branch, or the
+          # merged PR the commit came from on main. A lookup that fails only
+          # leaves the line out.
+          prs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq '.[] | "PR: \(.title): \(.html_url)"' || true)
           {
             echo "text<<EOF"
             echo "CI FAILED in $GITHUB_REPOSITORY ($GITHUB_EVENT_NAME on $GITHUB_REF_NAME)."
             echo "Failed jobs: $failed"
+            if [[ -n "$prs" ]]; then
+              echo "$prs"
+            fi
             echo "Run: $RUN_URL"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
