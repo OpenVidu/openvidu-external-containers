@@ -54,6 +54,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      # changed-images.sh lists the modules linked into the mc binary, so that
+      # updates of test-only Go modules do not rebuild mc and minio.
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: images/mc/go.mod
+          cache-dependency-path: images/mc/go.sum
+
       - name: Select images to build
         id: select
         env:
