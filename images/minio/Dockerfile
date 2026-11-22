@@ -36,7 +36,7 @@ RUN go mod download
 COPY images/mc/*.go ./
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /mc .
 
-FROM chainguard/wolfi-base:latest@sha256:71f52fd289650f1d021d60ba11235550b1b5ce124f3797bd254ca70c4cef39f9
+FROM chainguard/wolfi-base:latest@sha256:be019c1c74fe69204a42c4e10bc4d886a49bf5403ffa74374ef7baa408fc9a26
 
 ENV HOME="/" \
     OS_ARCH="amd64" \

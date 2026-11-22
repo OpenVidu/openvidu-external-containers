@@ -3,7 +3,7 @@ module github.com/openvidu/minio
 go 1.26.9
 
 require (
-	github.com/minio/madmin-go/v4 v4.10.7
+	github.com/minio/madmin-go/v4 v4.11.0
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/testcontainers/testcontainers-go v0.45.0
 )
@@ -32,7 +32,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafana/regexp v0.0.0-20250905093917-f7b3be9d1853 // indirect
-	github.com/klauspost/compress v1.20.0 // indirect
+	github.com/klauspost/compress v1.20.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
@@ -40,7 +40,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minlz v1.2.0 // indirect
+	github.com/minio/minlz v1.2.4 // indirect
 	github.com/minio/pkg/v3 v3.11.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.3.3 // indirect
