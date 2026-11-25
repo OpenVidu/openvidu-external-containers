@@ -55,7 +55,7 @@ jobs:
           token: ${{ secrets.RENOVATE_TOKEN }}
           # An exact version instead of the action's floating "44" image tag:
           # Renovate runs with write access to the repository.
-          renovate-version: 44.253.1
+          renovate-version: 44.257.9
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
